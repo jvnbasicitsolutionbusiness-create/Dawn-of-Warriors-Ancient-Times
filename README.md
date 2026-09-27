@@ -1,174 +1,550 @@
-# Dawn of Warriors: Ancient Times
+# ⚔️ DAWN OF WARRIORS: ANCIENT TIMES
 
-An original, playable ancient-world strategy **foundation**, built with React, Three.js, Express, and SQLite. This is not a static mockup, nor is it the entire large-scale game described in the design brief.
+DAWN OF WARRIORS: ANCIENT TIMES is a web-based, open-world real-time strategy game inspired by Age of Empires and Rise of Kingdoms. Set in the ancient world, players can choose kingdoms across Europe, Asia, and the Middle East to build powerful empires, develop settlements, gather resources, recruit armies, and conquer rival civilizations.
 
-## Play, download, and deploy
+The game features two main modes: Campaign Mode, where players freely build and expand their own empires, and Story Mode, which offers a guided narrative with cinematic cutscenes, memorable characters, and epic ancient battles.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the live-preview controls, ZIP/local installation steps, GitHub branch instructions, and full-stack hosting setup. `render.yaml` provides an optional paid-service Blueprint with persistent SQLite storage; no hosted service is created automatically.
+With over 50 playable and enemy characters, strategic combat, empire-building mechanics, resource management, and persistent player progression, the game delivers an immersive ancient-world experience. Africa and Australia are planned for future expansion.
 
-## Run
+### 1. 🎮 Game Overview
 
-Requires **Node 22.13+** (tested with Node 22.22.3).
+**DAWN OF WARRIORS: ANCIENT TIMES** is a web-based, open-world real-time strategy game inspired by *Age of Empires* and *Rise of Kingdoms*.
 
-```sh
-npm install
-npm run dev
-```
+Players command ancient civilizations, build empires, gather resources, recruit armies, explore territories, and conquer rival kingdoms.
 
-Open `http://localhost:3000`. The server binds to `0.0.0.0`, serves Vite and the API on the same origin, and supports the Arena live-preview host. No external database, API key, paid service, or frontend credential is required to play locally. Fonts are self-hosted through npm packages.
+The game uses an **isometric, elevated top-down perspective**, allowing players to observe and command entire armies instead of controlling a single soldier.
 
-A real guest account and server-side session are created automatically so the game is immediately playable. Register from the status bar to copy that guest empire into a verified account. **Guest access depends on the browser’s session cookie**; signing out or losing it loses access to that guest empire. The quit dialog warns about this.
+* **Platform:** Web browser
+* **Frontend:** React
+* **Genre:** Real-Time Strategy, Empire Building, Military Conquest
+* **Playable Regions:** Europe, Asia, and the Middle East
+* **Future Regions:** Africa and Australia
+* **Game Modes:** Campaign and Story Mode
 
-### Production
+---
 
-```sh
-cp .env.example .env
-# Set APP_URL to your public HTTPS URL and configure SMTP.
-npm run build
-npm start
-```
+# 2. 🏰 Main Menu and Game Modes
 
-Deploy behind an HTTPS reverse proxy and persist the `data/` directory. `.env` is loaded by Node, never bundled into the frontend. The application trusts **one reverse proxy**; adapt that setting to your actual infrastructure rather than trusting arbitrary forwarded headers. Secure cookies require HTTPS in production. SMTP must be configured for production registration and recovery; no development verification token is returned in production.
+The main menu contains exactly six options:
 
-This version is a **single-server** application. Do not run multiple independent instances against the same player simulation. Use a dedicated simulation service and PostgreSQL when moving to a multi-server production architecture.
+| Menu              | Function                                             |
+| ----------------- | ---------------------------------------------------- |
+| Campaign          | Build and expand your own empire.                    |
+| Story Mode        | Play a guided narrative campaign.                    |
+| Character Profile | View your profile, characters, and achievements.     |
+| Settings          | Configure game preferences.                          |
+| Extras            | Explore lore, encyclopedias, and additional content. |
+| Quit              | Leave the active game session.                       |
 
-## Play
+Only **Campaign and Story Mode** are playable game modes.
 
-- **Pan:** drag empty terrain, or use WASD / arrow keys.
-- **Zoom:** scroll, or use the map’s + / − buttons.
-- **Rotate:** Q / E, middle-button drag, or the rotate button.
-- **Select:** click a friendly cohort or its map badge. Shift-click adds cohorts; **Select all** selects the army.
-- **Move / attack:** right-click terrain after selecting cohorts. On touch devices, choose **March**, then tap a destination. Cohorts automatically attack enemies in range.
-- **Hold / retreat:** use the bottom command deck.
-- **Build:** press B or select **Build**, choose a structure, then place it on valid ground near a friendly settlement. Construction has a server timer and resource cost.
-- **Recruit:** press R or select **Recruit**. A cohort contains six soldiers and occupies six population slots.
-- **Upgrade / repair:** select a completed building on the map and use its contextual controls.
-- **Research:** open Research; prerequisites, costs, and completion times are enforced by the server.
-- **Capture:** defeat an outpost’s defenders, then bring cohorts close enough to wear down its fortification. Ownership, income rewards, and victory statistics update automatically.
-- **Diplomacy:** buy a 90-second truce from the status bar. A Market allows wood-to-gold trade through its contextual command.
-- **Pause:** the top-right pause button stops the simulation. Dialogs alone do not pause the world.
-- **Save:** Save progress or F5. Commands save immediately; active simulations also autosave every five seconds.
-- **Main menu:** click the Dawn of Warriors emblem. Campaign and Story Mode are the two primary game modes.
+---
 
-The commander’s handbook provides ten persisted lessons. The opening objective panel points you toward building a farm, training a cohort, and capturing Riverwatch. Enemy raids start after a 150-second grace period. The capital must survive. Capturing every site and defeating remaining enemies wins the valley.
+# 3. 🌍 World Map and Exploration
 
-### Formation effects
+The world map is divided into three initially playable regions:
 
-| Formation | Effect                                                      |
-| --------- | ----------------------------------------------------------- |
-| Line      | +10% infantry attack                                        |
-| Defensive | +40% defense, 30% slower movement                           |
-| Spear     | +20% spearman attack                                        |
-| Cavalry   | +30% mounted movement speed                                 |
-| Archer    | +2 range for archers and crossbowmen                        |
-| Siege     | Engineers inflict 145 rather than 110 damage per siege tick |
+### Europe
 
-Cohorts visibly rearrange into formation. Spearmen counter cavalry; cavalry counters ranged soldiers. Defeated cohorts grant experience; every 100 XP gives the surviving cohort another level and +12% attack. Research adds faction-wide bonuses. Field Medicine heals near the capital.
+Ancient kingdoms, forests, mountains, plains, and fortified cities.
 
-## Implemented scope
+### Asia
 
-- Responsive, original dark bronze/teal RTS interface; cinematic main menu; generated kingdom/commander artwork.
-- Elevated interactive 3D valley: procedural terrain, forests, river, bridge, towns, army models, selection rings, unit health, projectiles, damage numbers, and shrink-out defeat effects.
-- Real-time server-authoritative simulation, resource production/storage, timed recruitment/construction/research, combat, basic reactive enemy defenders, escalating raiding parties, capture rewards, victory and defeat.
-- **18 buildable structures**, up to three building levels, and **14 research technologies**.
-- **54 named roster entries**: 27 recruitable across three civilizations and 27 rival warriors across three opposing factions; nine role families with statistics, portraits, appearance metadata, recruitment requirements, and abilities/counters. Nine warriors are available to each chosen civilization.
-- **Europe / Aurelian Republic**, **Asia / Shen Dynasty**, and **Middle East / Ashuran Dominion**, with architectural/environmental changes, roster changes, and real economic/combat bonuses. These currently use regional variants of **one valley layout**, not three large independent geographical maps.
-- Africa and Australia appear in the atlas as **Coming soon** and cannot be started through the API.
-- Sandbox Campaign plus an original **three-chapter Story Mode**, illustrated/panning prologues, dialogue, validated chapter objectives, sequential unlocks, and rewards.
-- Player profile, live statistics, achievement collection, searchable roster, civilization lore, credits, persistent settings, generated ambient audio, and save-before-quit confirmation.
-- Real authentication: registration, email verification, login, logout, logout all sessions, change password, password reset, and account deletion. Bcrypt hashes, opaque cookie sessions, hashed single-use tokens, login-attempt audit records, validation, origin checks, and rate limits.
-- SQLite persistence for profiles, settings, game snapshots, accounts, sessions, verification/reset tokens, and security events.
+Ancient civilizations, river valleys, mountain ranges, and expansive territories.
 
-### Explicitly not finished
+### Middle East
 
-This is the first expandable release, **not a claim that all 25 sections of the brief are complete**. Remaining work includes:
+Desert kingdoms, trading cities, fertile river valleys, and fortified settlements.
 
-- Optional TOTP/2FA, backup codes, resend-verification/recovery support workflows, stronger anomaly detection, and production operations hardening.
-- A large, streamed world with independent regional maps, exploration/fog-of-war, tactical terrain obstacles, full pathfinding, naval play, and multiple independent settlement economies.
-- AI-managed building/resource economies, strategic alliances, adaptive army composition, and boss encounters. Current rivals defend, react, retreat, reinforce, raid, and scale modestly over time.
-- Individual soldier selection; this build selects **cohorts**. It does not simulate every member as an independent selectable unit.
-- Fifty bespoke hand-authored character models: the catalog has 54 distinct identities with procedural portraits/appearance data, but combat models are shared by role and enemy side, and regional statistics are intentionally related.
-- Equipment inventories, active commander abilities, full character-level persistence independent of cohorts, deep age advancement, and civilization-specific technology trees. Research is currently a shared tree with faction bonuses.
-- Full 3D cinematics, voice acting, long-form branching narrative, cinematic close-ups, sophisticated death animations, and more chapters. Current prologues are original illustrated cinematic presentations.
-- Automated tutorial completion checks, fully translated UI, key remapping, and comprehensive accessibility/gamepad support.
-- PostgreSQL schema normalization into all 20 requested domain tables, cloud backups, multiplayer, horizontal scaling, and conflict/version handling across simultaneous tabs.
+### Future Expansion
 
-The Extras → Credits panel and Account settings communicate the most important limitations inside the application as well.
+Africa and Australia appear as **COMING SOON** regions.
 
-## Local email verification and recovery
+## Exploration Rules
 
-With no SMTP configuration, **development only**:
+* Players begin with a limited area of explored territory.
+* Scouts and armies reveal unexplored locations.
+* Resources and settlements can be discovered across the map.
+* Enemy kingdoms occupy territories outside the player's control.
+* Terrain influences movement, visibility, and battlefield positioning.
 
-- Mail is written to `data/mailbox.jsonl` (ignored by Git).
-- Registration displays a clearly labeled one-time development verification button.
-- Password reset does **not** return recovery tokens to the client. Read the link from the local mailbox file. When using a proxied preview, open the `?reset=...` portion against your preview origin.
+The world map should feel large and connected, while individual battles take place in dedicated strategic environments.
 
-Production requires SMTP and delivers links using `APP_URL`. Tokens expire in 30 minutes and are stored hashed. Sessions last seven days and are invalidated on password reset/change. Preview cookies use Secure, SameSite=None, and Partitioned on `*.e2b.app`; ordinary same-site deployments use SameSite=Lax. Do not expose the development server or its mailbox to untrusted users.
+---
 
-## Architecture
+# 4. 🛡️ Campaign Mode — Build Your Own Empire
 
-```text
-src/
-  App.jsx                         game shell and view orchestration
-  components/
-    Battlefield.jsx               camera, input, map selection, visual effects
-    EmpirePanels.jsx              building, recruitment, research, roster
-    WorldPanels.jsx               atlas, story, profile, encyclopedia
-    AccountPanels.jsx             authentication and settings
-    UI.jsx                        reusable controls, dialogs, portraits, icons
-  game/
-    scene.js                      procedural geometry and mesh batching
-    audio.js                      user-enabled procedural audio
-  services/api.js                 same-origin API client
-  styles/main.css                 responsive strategy interface
-server/
-  index.js                        API composition, validation, simulation loop
-  auth.js                         account lifecycle and protected sessions
-  db.js                           relational schema, constraints and save storage
-  engine.js                       authoritative orders, economy, combat and AI
-shared/catalog.js                 civilizations, buildings, characters, technology, story
- tests/
-  engine.test.js                  deterministic simulation tests
-  api.test.js                     isolated HTTP/auth tests (in-memory DB)
-  browser.mjs                     real WebGL/browser interaction checks
-```
+Campaign Mode is a sandbox-style experience in which the player chooses a kingdom and develops an empire.
 
-Game data is serialized as a **server-generated, versioned snapshot** with stable entity identifiers. A client sends commands, never a trusted replacement snapshot, resource total, unlock list, or completed mission flag. This intentional foundation schema prioritizes consistent single-player saves over prematurely normalizing a large, changing RTS domain. Catalog definitions are shared for presentation; server definitions are authoritative.
+## Starting a Campaign
 
-Simulation runs at 1 Hz; rendering interpolates independently. Static terrain decorations and architecture are batched by material. Shadows and render resolution are reduced in lower graphics presets. Inactive worlds stop advancing 20 seconds after their last authenticated read; they are evicted from memory after three minutes, retaining the database save. There is no offline progression.
+1. Select Campaign Mode.
+2. Choose a geographical region.
+3. Select an available kingdom or civilization.
+4. Review its strengths, weaknesses, and starting resources.
+5. Establish your capital and begin expanding.
 
-## API overview
+## Campaign Objectives
 
-| Route                                             | Purpose                                        |
-| ------------------------------------------------- | ---------------------------------------------- |
-| `POST /api/auth/guest`                            | Real temporary account/session                 |
-| `POST /api/auth/register`                         | Validate and create an unverified account      |
-| `POST /api/auth/verify`                           | Consume one-time email token                   |
-| `POST /api/auth/login`                            | Authenticate and rotate session                |
-| `GET /api/auth/me`                                | Current safe user identity                     |
-| `POST /api/auth/forgot`, `/reset`, `/password`    | Recovery and password updates                  |
-| `POST /api/auth/logout`, `/logout-all`, `/delete` | Session/account management                     |
-| `GET /api/game`                                   | Load owner’s authoritative world               |
-| `POST /api/game/new`                              | Start an allowed civilization/mode             |
-| `POST /api/game/action`                           | Validated domain command                       |
-| `POST /api/game/save`                             | Persist server state; ignores client snapshots |
-| `GET /api/profile`                                | Derived player statistics and account activity |
-| `GET /api/settings`, `PUT /api/settings`          | Validated persistent preferences               |
+* Build settlements.
+* Gather resources.
+* Recruit military units.
+* Expand territorial control.
+* Research technologies.
+* Form alliances.
+* Defend your kingdom.
+* Conquer rival civilizations.
 
-Available domain commands: `build`, `upgrade`, `repair`, `recruit`, `research`, `move`, `formation`, `hold`, `retreat`, `trade`, `diplomacy`, `claim`, `tutorial`, and `pause`. Cross-origin browser mutations are rejected. Owner identity comes only from the session. APIs use parameterized SQL and schema validation.
+### Victory Conditions
 
-## Validation
+The campaign can support multiple objectives, such as:
 
-```sh
-npm test                 # deterministic engine + isolated API/security tests
-npm run build            # production frontend build
-npm audit --omit=dev     # dependency audit
-npm run dev              # keep running in another terminal for the browser tests
-npm run test:browser      # desktop/mobile WebGL and UI interaction checks
-```
+* Conquering a rival empire.
+* Capturing designated territories.
+* Controlling important settlements.
+* Completing civilization-specific objectives.
 
-The browser test uses an npm-distributed headless Chromium for restricted Linux CI. Standard browser installations can be supplied using `CHROMIUM_PATH`. Set `BASE_URL` to test another running server. Screenshot/test artifacts are kept in ignored `.cache/`, never in the application source. Tests exercise actual placement, recruitment, movement, research, roster search, persistence, region selection, story startup, audio controls, and mobile navigation.
+The player determines how to develop their empire and which kingdoms to confront.
 
-## Assets and licensing notes
+---
 
-The civilizations, narrative, UI, layouts, terrain, procedural geometry, and catalog are original to this implementation. The two kingdom/commander illustrations are AI-generated. Procedural portraits intentionally vary equipment, silhouette, and faction insignia within nine role families. Icons are Lucide (ISC); Cinzel and DM Sans are distributed under their package-provided Open Font Licenses. No proprietary assets, characters, maps, scenes, or dialogue from the inspiration games are included.
+# 5. 📖 Story Mode — A Guided Ancient-War Campaign
+
+Story Mode follows a predetermined narrative featuring original characters, ancient civilizations, political conflicts, and large-scale battles.
+
+Unlike Campaign Mode, the player follows a structured sequence of missions.
+
+## Story Progression
+
+Each chapter contains missions with specific objectives.
+
+Examples:
+
+* Defend a settlement from an invasion.
+* Gather survivors and rebuild an army.
+* Secure resources for a military campaign.
+* Form alliances with neighboring kingdoms.
+* Defeat an enemy commander.
+* Capture a fortified capital.
+* Confront the main antagonist.
+
+## Cinematic Cutscenes
+
+Story Mode features cinematic sequences inspired by the dramatic presentation of *Call of Duty: Modern Warfare*, adapted to an ancient setting.
+
+Cutscenes include:
+
+* Commanders delivering speeches.
+* Armies marching toward battle.
+* Cities under siege.
+* Political confrontations.
+* Character interactions.
+* Major battle introductions.
+* Victory and defeat sequences.
+
+**Gameplay remains strategic and top-down.** Cinematic sequences may use close-up camera angles.
+
+---
+
+# 6. 💰 Resource Management and Economy
+
+The game uses four primary resources.
+
+| Resource | Purpose                                              |
+| -------- | ---------------------------------------------------- |
+| Food     | Supports population growth and military recruitment. |
+| Wood     | Used for buildings and equipment.                    |
+| Stone    | Used for fortifications and advanced structures.     |
+| Gold     | Used for elite units, technologies, and trading.     |
+
+## Resource Rules
+
+1. Workers gather resources from available sources.
+2. Gathered resources are added to the player's economy.
+3. Buildings and military units require resources.
+4. Resource production continues while the game simulation is active.
+5. Controlling more territory can provide access to additional resources.
+6. Players must balance economic development with military spending.
+
+The core gameplay loop is **gather resources → construct buildings → recruit units → expand territory → fight enemies → strengthen the empire**. ([Blizzard News][1])
+
+---
+
+# 7. 🏗️ Empire Building and Construction
+
+Players can construct and upgrade buildings within their settlements.
+
+### Building Categories
+
+| Building        | Function                             |
+| --------------- | ------------------------------------ |
+| Town Center     | Main settlement building.            |
+| Capital Palace  | Administrative center of the empire. |
+| Barracks        | Trains infantry.                     |
+| Archery Range   | Trains ranged units.                 |
+| Stable          | Trains cavalry.                      |
+| Siege Workshop  | Produces siege equipment.            |
+| Blacksmith      | Improves military equipment.         |
+| Market          | Enables trading.                     |
+| Farm            | Produces food.                       |
+| Lumber Mill     | Supports wood production.            |
+| Stone Quarry    | Produces stone.                      |
+| Defensive Walls | Protect settlements.                 |
+| Watchtower      | Provides defensive coverage.         |
+| Research Center | Unlocks technologies.                |
+
+## Construction Rules
+
+* Buildings require resources.
+* Some buildings require prerequisite structures.
+* Construction takes time.
+* Buildings can be upgraded.
+* Buildings have health and can be damaged or destroyed.
+* Certain buildings unlock new military units and technologies.
+
+---
+
+# 8. ⚔️ Military Units and Character System
+
+The game must contain **at least 50 distinct characters**, divided into playable military units and AI-controlled enemies.
+
+## Playable Units
+
+Playable characters are military units that the player can recruit and deploy.
+
+### Unit Classes
+
+* Infantry
+* Swordsmen
+* Spearmen
+* Archers
+* Crossbowmen
+* Cavalry
+* Heavy Cavalry
+* Shield Warriors
+* Elite Guards
+* Commanders
+* Generals
+* Siege Specialists
+* Military Engineers
+* Regional Warriors
+* Elite Units
+
+## Character Attributes
+
+Each character has:
+
+* Name and portrait.
+* Civilization or faction.
+* Unit class.
+* Health.
+* Attack damage.
+* Defense.
+* Movement speed.
+* Attack range.
+* Attack speed.
+* Recruitment cost.
+* Special abilities.
+* Upgrade path.
+
+Characters can gain experience, level up, and improve through equipment, training, and technology.
+
+---
+
+# 9. 🤖 Enemy AI and Difficulty
+
+Enemy kingdoms are controlled by AI.
+
+The AI must be capable of:
+
+* Gathering resources.
+* Constructing buildings.
+* Recruiting military units.
+* Expanding territory.
+* Defending settlements.
+* Attacking rival kingdoms.
+* Reinforcing threatened locations.
+* Using formations and strategic positioning.
+
+## Difficulty Progression
+
+| Difficulty   | Enemy Behavior                                               |
+| ------------ | ------------------------------------------------------------ |
+| Early        | Smaller armies and basic tactics.                            |
+| Intermediate | Better equipment and stronger defenses.                      |
+| Advanced     | Larger armies and coordinated attacks.                       |
+| Elite        | Powerful commanders, advanced units, and complex strategies. |
+
+Enemy strength should increase through appropriate unit composition, upgrades, equipment, and tactical behavior.
+
+**Higher-level enemies should be more challenging without becoming impossible to defeat.**
+
+---
+
+# 10. 🗡️ Real-Time Combat and Army Commands
+
+Combat takes place in real time.
+
+The player commands armies using an elevated strategic camera.
+
+## Available Commands
+
+* Select units.
+* Move units.
+* Attack enemies.
+* Hold positions.
+* Defend locations.
+* Form military formations.
+* Retreat.
+* Pursue enemies.
+* Capture objectives.
+* Attack settlements.
+
+## Formation System
+
+Military formations include:
+
+* Line Formation
+* Defensive Formation
+* Spear Formation
+* Cavalry Formation
+* Archer Formation
+* Siege Formation
+
+## Combat Rules
+
+1. Units have health and combat attributes.
+2. Units automatically attack enemies within their effective range when given appropriate orders.
+3. Different unit classes have different strengths and weaknesses.
+4. Terrain and positioning influence combat effectiveness.
+5. Units can be defeated and removed from the battlefield.
+6. Commanders can provide bonuses to nearby troops.
+7. Battles end when the mission's victory or defeat conditions are met.
+
+### Example Counter System
+
+* Spearmen are effective against cavalry.
+* Cavalry can flank ranged units.
+* Archers attack from a distance.
+* Infantry protect the frontline.
+* Siege units specialize in damaging defensive structures.
+
+---
+
+# 11. 🔬 Technology and Civilization Progression
+
+Each civilization has a technology tree.
+
+### Technology Categories
+
+* Military
+* Agriculture
+* Construction
+* Trade
+* Defense
+* Engineering
+* Logistics
+
+Research can unlock:
+
+* New military units.
+* Stronger equipment.
+* Improved resource production.
+* Better defensive structures.
+* Faster construction.
+* Increased unit health and damage.
+
+Technologies require resources and may have prerequisites.
+
+---
+
+# 12. 🏆 Conquest and Territorial Control
+
+Territory is a central part of empire development.
+
+## Territory Rules
+
+* Territories may contain resources, settlements, and strategic locations.
+* Players can expand through exploration, settlement, diplomacy, or conquest.
+* Enemy territories are defended by AI armies and structures.
+* Capturing a settlement grants control according to the mission's rules.
+* Some territories require defeating a commander or capturing a strategic objective.
+
+Conquest should provide meaningful rewards, such as additional resources, new settlements, and access to strategic locations.
+
+---
+
+# 13. 👤 Character Profile, Settings, and Extras
+
+### Character Profile
+
+Displays:
+
+* Player identity.
+* Selected civilization.
+* Player level.
+* Character collection.
+* Unlocked commanders.
+* Military achievements.
+* Victories and defeats.
+* Conquered territories.
+
+### Settings
+
+Includes:
+
+* Graphics.
+* Audio.
+* Camera controls.
+* Gameplay preferences.
+* Accessibility options.
+
+### Extras
+
+Includes:
+
+* Character Encyclopedia.
+* Civilization Encyclopedia.
+* Ancient World Lore.
+* Military Unit Information.
+* Technology Information.
+* Achievements.
+* Credits.
+
+---
+
+# 14. 🔐 Authentication and Player Progression
+
+The game must have secure registration and login.
+
+## Registration
+
+Players create an account using:
+
+* Full Name.
+* Username.
+* Email Address.
+* Password.
+* Confirm Password.
+
+The system must support account verification and secure password storage.
+
+## Returning Login
+
+When players sign in again:
+
+1. Validate credentials.
+2. Verify account status.
+3. Restore the correct player profile.
+4. Load saved game progress.
+5. Return the player to the appropriate game screen.
+
+Logging out must not delete the player's account or progress.
+
+---
+
+# 15. 💾 Database and Save System
+
+The backend must securely store player data.
+
+### Data Categories
+
+* User accounts.
+* Player profiles.
+* Character unlocks and levels.
+* Resources.
+* Settlements.
+* Buildings.
+* Armies.
+* Technologies.
+* Campaign progress.
+* Story progress.
+* Achievements.
+* Settings.
+* Game saves.
+
+## Save Rules
+
+* Save progress at important milestones and appropriate intervals.
+* Preserve existing player data across sessions.
+* Validate important game changes on the server.
+* Prevent players from modifying protected resources or unlocking content through unauthorized requests.
+* Restore the correct save after login.
+
+---
+
+# 16. 🖥️ User Interface and Camera
+
+The game uses a **strategic, isometric or elevated top-down camera**, not a first-person shooter perspective.
+
+## Main Interface
+
+| UI Element   | Function                                                   |
+| ------------ | ---------------------------------------------------------- |
+| Top Bar      | Displays resources and civilization information.           |
+| Left Panel   | Displays selected units and their statistics.              |
+| Right Panel  | Displays building information and upgrades.                |
+| Bottom Panel | Provides recruitment, construction, and military commands. |
+| Minimap      | Displays explored territory and important locations.       |
+| World Map    | Displays territorial ownership and settlements.            |
+
+The interface must be responsive, readable, and suitable for managing large armies.
+
+---
+
+# 17. 🏁 Overall Gameplay Loop
+
+The complete gameplay cycle is:
+
+**1. Choose a Kingdom**
+Select a civilization and establish a capital.
+
+**2. Develop the Economy**
+Gather food, wood, stone, and gold.
+
+**3. Build Settlements**
+Construct buildings and improve infrastructure.
+
+**4. Recruit Armies**
+Train soldiers, commanders, and specialized units.
+
+**5. Explore the World**
+Discover resources, settlements, and rival kingdoms.
+
+**6. Expand Your Territory**
+Establish new settlements and secure strategic locations.
+
+**7. Fight Battles**
+Command armies, defend your territory, and defeat enemies.
+
+**8. Upgrade Your Civilization**
+Research technologies and improve military capabilities.
+
+**9. Conquer Rival Kingdoms**
+Capture settlements and achieve campaign objectives.
+
+**10. Preserve Your Progress**
+Save your empire and continue developing it in future sessions.
+
+---
+
+# 18. 🎯 Final Game Objective
+
+The objective of **DAWN OF WARRIORS: ANCIENT TIMES** is to deliver a complete ancient-world strategy experience where players can build powerful civilizations, command armies, explore vast territories, and conquer rival empires.
+
+The game combines:
+
+* Open-world exploration.
+* Empire building.
+* Resource management.
+* Military recruitment.
+* Real-time strategic combat.
+* Enemy AI.
+* Technology progression.
+* Territorial conquest.
+* Cinematic storytelling.
+* Persistent player progression.
+
+**The central gameplay principle is simple: build your civilization, strengthen your army, expand your territory, and rise to become a dominant ancient empire.**
+
+[1]: https://news.blizzard.com/en-us/article/23229495/finding-the-fun-real-time-strategy-games-for-beginners?utm_source=chatgpt.com "Finding the Fun: Real-Time Strategy Games for Beginners — Warcraft III: Reforged — Blizzard News"
