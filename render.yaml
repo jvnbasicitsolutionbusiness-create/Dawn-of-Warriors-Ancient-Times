@@ -1,0 +1,32 @@
+# Full-stack hosting, not GitHub Pages.
+# This paid service + persistent disk configuration is NOT provisioned by committing it.
+# Review the host's current pricing before creating a Blueprint.
+services:
+  - type: web
+    name: dawn-of-warriors
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    branch: arena/01a0e1c1-dawn-of-warriors-ancient-times
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    numInstances: 1
+    autoDeployTrigger: "off"
+    disk:
+      name: dawn-game-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /var/data/dawn.sqlite
+      - key: APP_URL
+        sync: false
+# Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and MAIL_FROM for a
+# standard SMTP provider, or GMAIL_USER, GMAIL_APP_PASSWORD, and MAIL_FROM.
+# Configure credentials in the service dashboard, never in this file.
+# Never add SMTP credentials to this file or to frontend code.

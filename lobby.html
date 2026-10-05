@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111c22" />
+    <meta
+      name="description"
+      content="DAWN OF WARRIORS: ANCIENT TIMES — The campaign lobby: main menu, kingdom command and the chronicles of your empire."
+    />
+    <title>DAWN OF WARRIORS: ANCIENT TIMES</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #0f1b1d;
+        color: #f4e7c8;
+        font-family: "Segoe UI", sans-serif;
+      }
+      #root { min-height: 100vh; }
+      .boot-message {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at top, #1e2c2f 0%, #0d1719 50%, #090d10 100%);
+        text-align: center;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .boot-message .box {
+        max-width: 560px;
+        background: rgba(10, 17, 20, 0.8);
+        border: 1px solid rgba(229, 197, 122, 0.45);
+        border-radius: 18px;
+        padding: 28px 24px;
+        box-shadow: 0 18px 70px rgba(0, 0, 0, 0.3);
+      }
+      .boot-message h1 {
+        margin: 0 0 12px;
+        letter-spacing: 0.1em;
+        font-size: clamp(1.5rem, 3vw, 2.6rem);
+      }
+      .boot-message p { margin: 0; line-height: 1.6; color: #d9d0be; }
+      .boot-message .status {
+        margin-top: 14px;
+        font-size: 0.9rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #e7d094;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot-message">
+        <div class="box">
+          <h1>DAWN OF WARRIORS</h1>
+          <p>Opening the campaign lobby and the gates of your kingdom...</p>
+          <div class="status" id="boot-status">Loading the realm...</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
