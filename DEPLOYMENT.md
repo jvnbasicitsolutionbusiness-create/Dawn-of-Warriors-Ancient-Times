@@ -32,7 +32,7 @@ The source ZIP contains the application, original assets, backend, tests, and se
 
 These development commands work on Windows, macOS, and Linux. Local player data is stored in `data/dawn.sqlite`. Do not delete that folder if you want to keep your local saves. Arena-preview saves are not included in the source ZIP; downloading starts a separate local installation.
 
-The sign-in page checks its configured API origin, its own origin, then the local development server. If you host the frontend separately, set the `game-api-origin` meta tag in `auth.html` to the backend origin and set `CLIENT_ORIGINS` on the backend to the frontend's exact origin (scheme and host, without a trailing slash).
+The sign-in page checks its configured API origin and then its own origin. Localhost is used only when the page itself is opened on localhost. The recommended hosted setup serves the frontend and API from the same Render service; it uses the platform-provided `PORT` and needs no fixed port in the browser. Set `APP_URL` to the public service URL so production email links point to the deployed site.
 
 Without SMTP, development verification is provided by the clearly labeled local verification button; recovery messages are written to `data/mailbox.jsonl`.
 
@@ -45,12 +45,12 @@ https://github.com/jvnbasicitsolutionbusiness-create/Dawn-of-Warriors-Ancient-Ti
 The implementation is published on:
 
 ```text
-arena/01a0e1c1-dawn-of-warriors-ancient-times
+main
 ```
 
-Use GitHub's branch selector to view that branch. Until its pull request is merged, the default `main` branch does not contain the game.
+Use GitHub's branch selector to view the implementation.
 
-To download directly from GitHub, select the implementation branch and choose **Code → Download ZIP**. Review the pull request before merging it into `main` if you want the game to become the repository's default version.
+To download directly from GitHub, select `main` and choose **Code → Download ZIP**.
 
 ### GitHub is not the game server
 
@@ -64,7 +64,7 @@ A `render.yaml` Blueprint is included for a single Node web service with a persi
 
 1. Create or sign in to your own Render account.
 2. Connect your GitHub account to Render and authorize access to this repository.
-3. Choose **New → Blueprint** and select the repository and implementation branch shown above.
+3. Choose **New → Blueprint** and select the repository and `main` branch.
 4. Review the configuration and costs. It specifies one service, a persistent disk, and manual deployment rather than automatic deployment on every commit.
 5. Set `APP_URL` to the public HTTPS URL you intend to use. If Render assigns a different URL during creation, update `APP_URL` to the actual URL shown in its dashboard **before enabling email registration**.
 6. Create the service only when you are comfortable with the cost.
@@ -77,7 +77,7 @@ If you prefer to create a web service manually instead of importing the Blueprin
 | Setting               | Value                                                  |
 | --------------------- | ------------------------------------------------------ |
 | Source                | This GitHub repository                                 |
-| Branch                | `arena/01a0e1c1-dawn-of-warriors-ancient-times`        |
+| Branch                | `main`                                                 |
 | Runtime               | Node                                                   |
 | Node version          | `22.22.3`                                              |
 | Build command         | `npm ci --include=dev && npm run build`                |
@@ -122,7 +122,7 @@ Do not paste hosting passwords, SMTP passwords, or other secrets into chat. Conf
 
 ## 5. Updating the hosted game
 
-Push changes to the implementation branch, run the tests, then use the host's manual deployment control. If you merge the pull request and later want the host to track `main`, change the service's source branch in your hosting dashboard yourself; preserve the persistent disk and environment variables.
+Push changes to `main`, run the tests, then use the host's manual deployment control; preserve the persistent disk and environment variables.
 
 ## Release expectations
 

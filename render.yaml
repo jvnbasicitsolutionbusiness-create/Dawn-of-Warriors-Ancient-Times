@@ -7,7 +7,7 @@ services:
     runtime: node
     plan: 0.5c-512mb
     region: singapore
-    branch: arena/01a0e1c1-dawn-of-warriors-ancient-times
+    branch: main
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health

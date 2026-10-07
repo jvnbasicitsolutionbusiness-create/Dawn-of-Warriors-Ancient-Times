@@ -629,7 +629,7 @@
       const verificationInstructions = document.getElementById(
         "verificationInstructions",
       );
-      // Prefer an explicitly configured API, then same origin, then local development.
+      // Prefer an explicitly configured API, then same origin.
       const apiOriginReady = (async function resolveApiOrigin() {
         const normalizeOrigin = (value) => {
           try {
@@ -644,13 +644,17 @@
         const configuredOrigin = document
           .querySelector('meta[name="game-api-origin"]')
           ?.content.trim();
+        const localDevelopment =
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1";
         const candidates = [
           ...new Set(
             [
               normalizeOrigin(configuredOrigin),
               normalizeOrigin(window.location.origin),
-              "http://localhost:3002",
-              "http://127.0.0.1:3002",
+              ...(localDevelopment
+                ? ["http://localhost:3002", "http://127.0.0.1:3002"]
+                : []),
             ].filter(Boolean),
           ),
         ];
@@ -670,7 +674,7 @@
             window.clearTimeout(timeout);
           }
         }
-        return candidates.at(-1);
+        return candidates[0];
       })();
       const battlefieldScenes = [...document.querySelectorAll(".scene")];
       let currentView = "login";
@@ -757,8 +761,13 @@
               apiOrigin === window.location.origin ? "same-origin" : "include",
           });
         } catch {
+          const hostname = new URL(apiOrigin).hostname;
+          const localDevelopment =
+            hostname === "localhost" || hostname === "127.0.0.1";
           throw new Error(
-            `Unable to reach the game server at ${apiOrigin}. Start it with npm run dev, then reload the page.`,
+            localDevelopment
+              ? `Unable to reach the game server at ${apiOrigin}. Start it with npm run dev, then reload the page.`
+              : `Unable to reach the game server at ${apiOrigin}. Confirm that the deployed backend is running and its /api routes are available.`,
           );
         }
 

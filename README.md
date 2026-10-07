@@ -1,10 +1,16 @@
 # ⚔️ DAWN OF WARRIORS: ANCIENT TIMES
 
+> **Static GitHub Pages game:** This release runs without a Node.js or Express
+> server. Enable **Settings → Pages → GitHub Actions** to publish it. See
+> [DEPLOYMENT.md](./DEPLOYMENT.md). Saves are local to the current browser and
+> are not synced between devices; account registration and email recovery are
+> not part of this static release.
+
 DAWN OF WARRIORS: ANCIENT TIMES is a web-based, open-world real-time strategy game inspired by Age of Empires and Rise of Kingdoms. Set in the ancient world, players can choose kingdoms across Europe, Asia, and the Middle East to build powerful empires, develop settlements, gather resources, recruit armies, and conquer rival civilizations.
 
 The game features two main modes: Campaign Mode, where players freely build and expand their own empires, and Story Mode, which offers a guided narrative with cinematic cutscenes, memorable characters, and epic ancient battles.
 
-Every new Campaign or Story Mode realm begins in its selected civilization's historical period with a single poor worker, period-appropriate tools, no buildings, and no stored resources. Open **Camp & people** to gather supplies by hand, hire villagers, assign specialist roles, and work toward founding a settlement. The opening and post-authentication loading screens use animated pixel-art historical scenes.
+Every new Campaign or Story Mode realm begins in its selected civilization's historical period with its own movable historical commander, period-appropriate tools, no buildings, no stored resources, and no enemy forces. The wilderness contains trees, wildlife, and gatherable materials; roads, bridges, fields, and settlement structures appear only after the realm has grown. Build a town center, establish at least four buildings, and grow to 12 people to reveal rival territories and begin conquest. Open **Camp & people** to gather supplies, hire villagers, and assign specialist roles. The opening loading screen uses animated pixel-art historical scenes.
 
 With over 50 playable and enemy characters, strategic combat, empire-building mechanics, resource management, and persistent player progression, the game delivers an immersive ancient-world experience. Africa and Australia are planned for future expansion.
 
@@ -415,75 +421,16 @@ Includes:
 
 ---
 
-# 14. 🔐 Authentication and Player Progression
+# 14. 💾 Browser Saves and Settings
 
-The game must have secure registration and login.
-
-## Registration
-
-Players create an account using:
-
-- Full Name.
-- Username.
-- Email Address.
-- Password.
-- Confirm Password.
-
-The system must support account verification and secure password storage.
-
-Verification is a one-time email link (not an OTP). Configure SMTP before
-expecting messages in an external inbox. For Gmail, enable 2-Step Verification,
-create an App Password, then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`,
-`SMTP_USER`, `SMTP_PASSWORD` (the App Password), and an authorized `MAIL_FROM`
-in the server's local `.env`. Never use a regular Gmail password or commit mail
-credentials. Without SMTP in local development, the registration screen
-provides a one-click local verification option; no email is sent.
-
-## Returning Login
-
-When players sign in again:
-
-1. Validate credentials.
-2. Verify account status.
-3. Restore the correct player profile.
-4. Load saved game progress.
-5. Return the player to the appropriate game screen.
-
-Logging out must not delete the player's account or progress.
+The static release saves campaign state and game preferences in the browser's
+local storage. Saves are scoped to the current browser and website origin;
+they are not account-backed, synchronized, or recoverable after clearing site
+data. GitHub Pages does not run a game server or database.
 
 ---
 
-# 15. 💾 Database and Save System
-
-The backend must securely store player data.
-
-### Data Categories
-
-- User accounts.
-- Player profiles.
-- Character unlocks and levels.
-- Resources.
-- Settlements.
-- Buildings.
-- Armies.
-- Technologies.
-- Campaign progress.
-- Story progress.
-- Achievements.
-- Settings.
-- Game saves.
-
-## Save Rules
-
-- Save progress at important milestones and appropriate intervals.
-- Preserve existing player data across sessions.
-- Validate important game changes on the server.
-- Prevent players from modifying protected resources or unlocking content through unauthorized requests.
-- Restore the correct save after login.
-
----
-
-# 16. 🖥️ User Interface and Camera
+# 15. 🖥️ User Interface and Camera
 
 The game uses a **strategic, isometric or elevated top-down camera**, not a first-person shooter perspective.
 
@@ -502,7 +449,7 @@ The interface must be responsive, readable, and suitable for managing large armi
 
 ---
 
-# 17. 🏁 Overall Gameplay Loop
+# 16. 🏁 Overall Gameplay Loop
 
 The complete gameplay cycle is:
 
@@ -538,7 +485,7 @@ Save your empire and continue developing it in future sessions.
 
 ---
 
-# 18. 🎯 Final Game Objective
+# 17. 🎯 Final Game Objective
 
 The objective of **DAWN OF WARRIORS: ANCIENT TIMES** is to deliver a complete ancient-world strategy experience where players can build powerful civilizations, command armies, explore vast territories, and conquer rival empires.
 
