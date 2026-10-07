@@ -91,6 +91,11 @@ function registrationConflict(code, message) {
   return Object.assign(new Error(message), { code, status: 409 });
 }
 async function sendLink(user, kind) {
+  const configuredAppUrl = process.env.APP_URL?.trim();
+  if (prod && !configuredAppUrl)
+    throw Error("APP_URL must be configured for production email links.");
+  const appUrl = configuredAppUrl || "http://localhost:3002";
+  const normalizedAppUrl = appUrl.replace(/\/+$/, "");
   const token = randomBytes(32).toString("hex");
   db.prepare("DELETE FROM account_tokens WHERE user_id=? AND kind=?").run(
     user.id,
@@ -103,11 +108,7 @@ async function sendLink(user, kind) {
     Date.now() + 1000 * 60 * 30,
   );
   const target = kind === "verify" ? "/auth.html" : "/lobby.html";
-  const appUrl = (process.env.APP_URL || "http://localhost:3002").replace(
-    /\/+$/,
-    "",
-  );
-  const url = `${appUrl}${target}?${kind}=${token}`;
+  const url = `${normalizedAppUrl}${target}?${kind}=${token}`;
   const subject =
     kind === "verify"
       ? "Verify your Dawn of Warriors account"

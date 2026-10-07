@@ -24,7 +24,7 @@ export async function api(path, body, method) {
     } catch {
       const htmlHint = text.includes("<!doctype") || text.includes("<html");
       const message = htmlHint
-        ? "The campaign server did not respond with JSON. Start the game with npm run dev and open http://localhost:3002/."
+        ? "The campaign server did not respond with JSON. Make sure the frontend and /api are served by the game server."
         : "The server returned an invalid response.";
       const error = Error(message);
       error.status = response.status;
