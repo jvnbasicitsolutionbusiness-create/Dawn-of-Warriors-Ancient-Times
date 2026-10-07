@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { createSpriteSheet } from "./sprites.js";
 export const riverX = (z) => 12 + Math.sin(z / 14) * 5;
 const materials = new Map(),
   geometries = new Map();
@@ -105,7 +104,12 @@ function ribbon(points, width, color, y = 0.06) {
   m.receiveShadow = true;
   return m;
 }
-export function makeWorld(scene, region = "aurelia", quality = "High") {
+export function makeWorld(
+  scene,
+  region = "aurelia",
+  quality = "High",
+  wilderness = false,
+) {
   const world = new THREE.Group();
   scene.add(world);
   const desert = region === "ashur",
@@ -153,6 +157,9 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
     side: THREE.DoubleSide,
   });
   world.add(water);
+  const infrastructure = new THREE.Group();
+  infrastructure.visible = !wilderness;
+  world.add(infrastructure);
   const paths = [
     [
       { x: -34, z: 28 },
@@ -175,7 +182,7 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
     ],
   ];
   paths.forEach((p) =>
-    world.add(ribbon(p, 2.4, desert ? "#c9b58c" : "#c1b796", 0.07)),
+    infrastructure.add(ribbon(p, 2.4, desert ? "#c9b58c" : "#c1b796", 0.07)),
   );
   // A stone bridge spans the river, wide enough for a marching cohort.
   const bridge = new THREE.Group();
@@ -186,7 +193,7 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
   for (const x of [-4, -1.4, 1.4, 4])
     for (const z of [-1.7, 1.7])
       box(bridge, x, -0.4, z, 0.65, 1.8, 0.65, "#b2ad94");
-  world.add(bridge);
+  infrastructure.add(bridge);
   const clusters = [
     [-36, 15, 11],
     [-36, -8, 10],
@@ -257,6 +264,71 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
       }
       world.add(tree);
     }
+  for (const [x, z, angle] of [
+    [-20, 7, 0.3],
+    [-8, 13, -0.8],
+    [-26, 12, 1.2],
+  ]) {
+    const woodpile = new THREE.Group();
+    woodpile.position.set(x, height(x, z), z);
+    woodpile.rotation.y = angle;
+    for (let i = 0; i < 4; i++) {
+      const log = cylinder(
+        woodpile,
+        (i % 2) * 0.35,
+        0.16 + Math.floor(i / 2) * 0.24,
+        (Math.floor(i / 2) - 0.5) * 0.72,
+        0.16,
+        1.25,
+        "#806344",
+        6,
+      );
+      log.rotation.z = Math.PI / 2;
+    }
+    world.add(woodpile);
+  }
+  for (const [x, z] of [
+    [-9, 8],
+    [-23, 1],
+    [-29, 11],
+  ]) {
+    const stones = new THREE.Group();
+    stones.position.set(x, height(x, z), z);
+    for (let i = 0; i < 5; i++) {
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.35 + (i % 2) * 0.15, 0),
+        mat(i % 2 ? "#888a7e" : "#a09e8c"),
+      );
+      rock.position.set(
+        Math.sin(i * 2) * 0.55,
+        0.2 + (i % 2) * 0.1,
+        Math.cos(i * 2) * 0.5,
+      );
+      rock.castShadow = true;
+      stones.add(rock);
+    }
+    world.add(stones);
+  }
+  for (const [x, z, turn] of [
+    [-31, -2, 0.5],
+    [-3, -11, -0.6],
+    [-38, 8, 1.4],
+  ]) {
+    const deer = new THREE.Group();
+    deer.position.set(x, height(x, z), z);
+    deer.rotation.y = turn;
+    box(deer, 0, 0.58, 0, 0.5, 0.48, 1.05, "#90724e");
+    box(deer, 0, 0.86, -0.47, 0.36, 0.38, 0.38, "#9c7f59");
+    box(deer, 0, 0.8, -0.73, 0.22, 0.16, 0.22, "#a98c62");
+    for (const legX of [-0.16, 0.16])
+      for (const legZ of [-0.34, 0.34])
+        box(deer, legX, 0.08, legZ, 0.09, 0.55, 0.09, "#654f39");
+    for (const antlerX of [-0.12, 0.12]) {
+      box(deer, antlerX, 1.18, -0.47, 0.05, 0.42, 0.05, "#594a37");
+      box(deer, antlerX * 1.8, 1.33, -0.47, 0.05, 0.2, 0.05, "#594a37");
+    }
+    world.add(deer);
+  }
   // Low-poly mountain ridges and scattered boulders frame the valley.
   for (let i = 0; i < 26; i++) {
     const x = -58 + i * 4.8,
@@ -297,7 +369,7 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
     const f = new THREE.Group();
     f.position.set(x, height(x, z) + 0.03, z);
     field(f, 0, 0, 4.5, 3.4);
-    world.add(f);
+    infrastructure.add(f);
   }
   // Small surrounding villas make the capital feel like a lived-in settlement.
   for (const [x, z, r] of [
@@ -315,7 +387,7 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
     g.position.set(x, height(x, z), z);
     g.rotation.y = r;
     house(g, 0, 0, 1.7, 2, region);
-    world.add(g);
+    infrastructure.add(g);
   }
   // City wall and towers.
   const walls = new THREE.Group();
@@ -334,9 +406,10 @@ export function makeWorld(scene, region = "aurelia", quality = "High") {
   }
   for (const x of [-12, 12])
     for (const z of [-11, 11]) tower(walls, x, z, 2.9, region);
-  world.add(walls);
-  compactGroup(world, [land, water]);
-  return { world, land, water };
+  infrastructure.add(walls);
+  compactGroup(infrastructure);
+  compactGroup(world, [land, water, infrastructure]);
+  return { world, land, water, infrastructure };
 }
 function field(g, x, z, w = 4, d = 4) {
   box(g, x, 0.02, z, w, 0.1, d, "#8e8355");
@@ -502,105 +575,133 @@ export function fortModel(region, large = false, enemy = true) {
 }
 export function armyModel(character, enemy = false, formation = "line") {
   const g = new THREE.Group();
-  const palette = enemy ? ["#8a3c31", "#d9b38a"] : ["#446d7f", "#d6c09d"];
-  const kind = character.class.toLowerCase().includes("cavalry")
-    ? "cavalry"
-    : ["Archer", "Crossbowman"].includes(character.class)
-      ? "archer"
-      : "guardian";
-  const sheet = createSpriteSheet(kind, palette, 4, 128);
-  if (sheet.canvas) {
-    const texture = new THREE.CanvasTexture(sheet.canvas);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    texture.needsUpdate = true;
-    const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        alphaTest: 0.12,
-        depthWrite: false,
-      }),
-    );
-    sprite.scale.set(2.9, 3.2, 1);
-    sprite.position.y = 1.1;
-    g.add(sprite);
-  } else {
-    const cavalry = character.class.toLowerCase().includes("cavalry");
-    const color = enemy ? "#974e43" : "#447f93";
-    for (let i = 0; i < 6; i++) {
-      const soldier = new THREE.Group();
-      const positions = {
-        line: [((i % 3) - 1) * 0.65, (Math.floor(i / 3) - 0.5) * 0.85],
-        defensive: [
-          Math.sin((i * Math.PI) / 3) * 1.05,
-          Math.cos((i * Math.PI) / 3) * 1.05,
-        ],
-        spear: [((i % 3) - 1) * 0.5, Math.floor(i / 3) * 1.1],
-        cavalry: [
-          (i % 2 ? 1 : -1) * Math.floor((i + 1) / 2) * 0.55,
-          Math.floor((i + 1) / 2) * 0.7,
-        ],
-        archer: [((i % 3) - 1) * 1.15, Math.floor(i / 3) * 1.25],
-        siege: [((i % 3) - 1) * 1.1, Math.floor(i / 3) * 1.4],
-      };
-      const p = positions[formation] || positions.line;
-      soldier.position.set(p[0], 0, p[1]);
-      if (cavalry) {
-        box(soldier, 0, 0.3, 0, 0.38, 0.45, 0.8, "#77674e");
-        for (const x of [-0.15, 0.15])
-          for (const z of [-0.25, 0.25])
-            box(soldier, x, 0, z, 0.1, 0.4, 0.1, "#514d40");
-        box(soldier, 0, 0.65, -0.4, 0.25, 0.4, 0.3, "#77674e");
-      }
-      const y = cavalry ? 0.7 : 0;
-      box(soldier, 0, y + 0.25, 0, 0.33, 0.44, 0.26, color);
-      const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.17, 6, 5),
-        mat("#bba986"),
-      );
-      head.position.set(0, y + 0.85, 0);
-      soldier.add(head);
-      cone(soldier, 0, y + 0.88, 0, 0.19, 0.22, "#b3a582", 6);
-      box(soldier, 0.23, y + 0.2, 0, 0.12, 0.9, 0.1, "#8b805e");
-      if (character.class === "Spearman")
-        box(soldier, 0.23, y + 0.4, 0, 0.05, 1.6, 0.05, "#a7aa9e");
-      else if (["Archer", "Crossbowman"].includes(character.class)) {
-        const bow = box(
-          soldier,
-          0.28,
-          y + 0.4,
-          -0.2,
-          0.06,
-          0.65,
-          0.08,
-          "#786847",
-        );
-        bow.rotation.x = 0.2;
-      } else box(soldier, -0.23, y + 0.3, -0.05, 0.12, 0.48, 0.38, "#9d9c82");
-      g.add(soldier);
+  const cavalry = character.class.toLowerCase().includes("cavalry");
+  const ranged = ["Archer", "Crossbowman"].includes(character.class);
+  const bodyColor = enemy ? "#a43d32" : "#287a9e";
+  const trimColor = enemy ? "#e2ae65" : "#e5cf86";
+  const positions = {
+    line: [-1.4, 0, 1.4].flatMap((x) => [
+      [x, 0.8],
+      [x, -0.8],
+    ]),
+    defensive: Array.from({ length: 6 }, (_, i) => [
+      Math.sin((i * Math.PI) / 3) * 1.45,
+      Math.cos((i * Math.PI) / 3) * 1.45,
+    ]),
+    spear: [
+      [-0.8, 1.15],
+      [0, 1.15],
+      [0.8, 1.15],
+      [-0.8, -0.65],
+      [0, -0.65],
+      [0.8, -0.65],
+    ],
+    cavalry: [
+      [0, 1.1],
+      [-0.95, 0.1],
+      [0.95, 0.1],
+      [-1.55, -0.9],
+      [0, -0.9],
+      [1.55, -0.9],
+    ],
+    archer: [
+      [-1.5, 1.1],
+      [0, 1.1],
+      [1.5, 1.1],
+      [-1.5, -0.9],
+      [0, -0.9],
+      [1.5, -0.9],
+    ],
+    siege: [
+      [-1.65, 1.1],
+      [-0.55, 1.1],
+      [0.55, 1.1],
+      [1.65, 1.1],
+      [-0.55, -0.9],
+      [0.55, -0.9],
+    ],
+  }[formation] || [
+    [-1.4, 0.8],
+    [0, 0.8],
+    [1.4, 0.8],
+    [-1.4, -0.8],
+    [0, -0.8],
+    [1.4, -0.8],
+  ];
+  for (let i = 0; i < 6; i++) {
+    const soldier = new THREE.Group();
+    const [x, z] = positions[i];
+    soldier.position.set(x, 0, z);
+    if (cavalry) {
+      box(soldier, 0, 0.3, 0, 0.48, 0.5, 0.95, "#806b4d");
+      for (const legX of [-0.18, 0.18])
+        for (const legZ of [-0.31, 0.31])
+          box(soldier, legX, 0, legZ, 0.12, 0.48, 0.12, "#554a38");
+      box(soldier, 0, 0.68, -0.45, 0.32, 0.42, 0.36, "#987a53");
     }
+    const y = cavalry ? 0.72 : 0;
+    box(soldier, 0, y + 0.4, 0, 0.52, 0.67, 0.36, bodyColor);
+    box(soldier, -0.29, y + 0.43, 0, 0.1, 0.46, 0.38, trimColor);
+    box(soldier, 0.29, y + 0.43, 0, 0.1, 0.46, 0.38, trimColor);
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 8, 6),
+      mat("#c9a77e"),
+    );
+    head.position.set(0, y + 1.0, 0);
+    soldier.add(head);
+    if (character.class === "Spearman" || character.class === "Elite guard") {
+      const helmet = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
+        mat(trimColor),
+      );
+      helmet.position.set(0, y + 1.08, 0);
+      soldier.add(helmet);
+    } else {
+      box(soldier, 0, y + 1.19, 0, 0.42, 0.12, 0.4, trimColor);
+    }
+    if (character.class === "Spearman") {
+      box(soldier, 0.38, y + 0.68, 0, 0.09, 1.8, 0.09, "#ddd1a7");
+    } else if (ranged) {
+      const bow = box(
+        soldier,
+        0.36,
+        y + 0.7,
+        -0.2,
+        0.08,
+        0.95,
+        0.08,
+        "#62492d",
+      );
+      bow.rotation.z = 0.16;
+    } else {
+      box(soldier, -0.38, y + 0.43, -0.08, 0.13, 0.7, 0.12, "#ddd1a7");
+      box(soldier, -0.43, y + 0.27, -0.08, 0.22, 0.35, 0.42, trimColor);
+    }
+    soldier.scale.setScalar(1.55);
+    g.add(soldier);
   }
   banner(g, 0, 0.4, 0, enemy ? "#974e43" : "#447f93");
   compactGroup(g);
   return g;
 }
-export function workerModel(role = "worker", gender = "m") {
+export function workerModel(role = "worker", gender = "m", hero = {}) {
   const g = new THREE.Group();
   const tunic =
-    role === "hunter" || role === "archer"
-      ? "#6b7a4f"
-      : role === "miner"
-        ? "#6d6a63"
-        : role === "lumberjack"
-          ? "#7a5f42"
-          : role === "homemaker"
-            ? "#8a6f86"
-            : role === "farmer" || role === "gatherer"
-              ? "#8a7d4f"
-              : role === "builder"
-                ? "#7d6b52"
-                : "#7b7361";
+    role === "commander"
+      ? hero.color || "#b99a55"
+      : role === "hunter" || role === "archer"
+        ? "#6b7a4f"
+        : role === "miner"
+          ? "#6d6a63"
+          : role === "lumberjack"
+            ? "#7a5f42"
+            : role === "homemaker"
+              ? "#8a6f86"
+              : role === "farmer" || role === "gatherer"
+                ? "#8a7d4f"
+                : role === "builder"
+                  ? "#7d6b52"
+                  : "#7b7361";
   const skin = "#c3a077";
   box(g, 0, 0.42, 0, 0.3, 0.5, 0.24, tunic);
   for (const x of [-0.09, 0.09]) box(g, x, 0, 0, 0.11, 0.42, 0.12, "#5c5346");
@@ -615,10 +716,17 @@ export function workerModel(role = "worker", gender = "m") {
   } else {
     box(g, 0, 1.14, 0, 0.3, 0.1, 0.28, "#4a4038");
   }
-  if (role === "lumberjack" || role === "worker")
+  if (role === "commander") {
+    box(g, 0, 0.5, -0.17, 0.52, 0.72, 0.12, "#732f36");
+    box(g, 0, 0.88, 0, 0.44, 0.14, 0.4, "#e1c478");
+    box(g, 0, 1.22, 0, 0.5, 0.14, 0.43, "#dbbe69");
+    for (const x of [-0.2, 0.2])
+      box(g, x, 1.33, 0, 0.08, 0.16, 0.08, "#e9d18d");
+    box(g, 0.32, 0.48, 0, 0.09, 1.55, 0.09, "#d8c17c");
+    box(g, 0.32, 1.25, 0, 0.48, 0.3, 0.06, hero.color || "#b99a55");
+  } else if (role === "lumberjack" || role === "worker")
     box(g, 0.24, 0.5, 0, 0.07, 0.75, 0.07, "#8b7050");
-  else if (role === "miner")
-    box(g, 0.24, 0.55, 0, 0.07, 0.6, 0.07, "#8b7050");
+  else if (role === "miner") box(g, 0.24, 0.55, 0, 0.07, 0.6, 0.07, "#8b7050");
   else if (role === "hunter" || role === "archer") {
     const bow = box(g, 0.26, 0.6, -0.1, 0.05, 0.7, 0.06, "#786847");
     bow.rotation.x = 0.15;
@@ -626,6 +734,7 @@ export function workerModel(role = "worker", gender = "m") {
     box(g, 0.24, 0.45, 0, 0.06, 0.7, 0.06, "#9a8257");
   else if (role === "builder") box(g, 0.24, 0.5, 0, 0.1, 0.5, 0.1, "#9d9e8a");
   compactGroup(g);
+  g.scale.setScalar(role === "commander" ? 1.8 : 1.35);
   return g;
 }
 export function selectionRing(radius = 2, color = "#bcccaa") {
@@ -650,7 +759,9 @@ export function compactGroup(group, skip = []) {
   const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert(),
     batches = new Map();
   group.traverse((mesh) => {
-    if (!mesh.isMesh || skip.includes(mesh)) return;
+    if (!mesh.isMesh) return;
+    for (let parent = mesh; parent; parent = parent.parent)
+      if (skip.includes(parent)) return;
     let geometry = mesh.geometry.clone();
     if (geometry.index) {
       const flat = geometry.toNonIndexed();

@@ -1,5 +1,12 @@
 export const GAME_RULES = {
-  startingResources: { food: 80, wood: 55, stone: 40, gold: 0, silver: 0, meat: 0 },
+  startingResources: {
+    food: 80,
+    wood: 55,
+    stone: 40,
+    gold: 0,
+    silver: 0,
+    meat: 0,
+  },
   startingInventory: ["pickaxe", "fishing_rod", "bucket"],
   startingHero: {
     name: "A poor worker",
@@ -12,7 +19,8 @@ export const GAME_RULES = {
   raidInterval: 75,
   baseBuildDistance: 5,
   battleTickLength: 1,
-  empireVictoryCondition: "control every stronghold and keep the capital intact",
+  empireVictoryCondition:
+    "control every stronghold and keep the capital intact",
 };
 
 export const CIVILIZATIONS = [
@@ -311,8 +319,65 @@ export const CIVILIZATIONS = [
     startYear: -4500,
   },
 ];
-// A new campaign/story game begins with a single poor worker holding only the
-// tools of their period. The kit is chosen by the civilization's start year.
+export const COMMANDERS = {
+  aurelia: { name: "Lucius Junius Brutus", title: "Founder of the Republic" },
+  rome: { name: "Augustus", title: "First Roman Emperor" },
+  byzantium: { name: "Justinian I", title: "Emperor of the Romans" },
+  carolingian: { name: "Charlemagne", title: "King of the Franks" },
+  macedon: { name: "Alexander the Great", title: "King of Macedon" },
+  hre: { name: "Frederick Barbarossa", title: "Holy Roman Emperor" },
+  british: { name: "Arthur Wellesley", title: "Duke of Wellington" },
+  soviet: { name: "Georgy Zhukov", title: "Marshal of the Soviet Union" },
+  shen: { name: "Liu Bang", title: "Emperor Gaozu of Han" },
+  qin: { name: "Qin Shi Huang", title: "First Emperor of Qin" },
+  tang: { name: "Li Shimin", title: "Emperor Taizong of Tang" },
+  mongol: { name: "Genghis Khan", title: "Founder of the Mongol Empire" },
+  tokugawa: { name: "Tokugawa Ieyasu", title: "Shogun of Japan" },
+  shang: { name: "Wu Ding", title: "King of Shang" },
+  qing: { name: "Kangxi Emperor", title: "Emperor of the Great Qing" },
+  ashur: {
+    name: "Tiglath-Pileser III",
+    title: "King of the Neo-Assyrian Empire",
+  },
+  babylon: { name: "Hammurabi", title: "King of Babylon" },
+  persia: {
+    name: "Cyrus the Great",
+    title: "Founder of the Achaemenid Empire",
+  },
+  abbasid: { name: "Harun al-Rashid", title: "Abbasid Caliph" },
+  ottoman: { name: "Mehmed II", title: "Sultan of the Ottoman Empire" },
+  sumer: { name: "Gilgamesh", title: "King of Uruk" },
+};
+export function commanderFor(civilization) {
+  return (
+    COMMANDERS[civilization] || {
+      name: "The First Founder",
+      title: "Leader of a new settlement",
+    }
+  );
+}
+export function commanderProfileFor(civilization, savedProfile = {}) {
+  const historical = commanderFor(civilization);
+  const civ = CIVILIZATIONS.find((entry) => entry.id === civilization);
+  const legacyProfile =
+    !savedProfile.name ||
+    savedProfile.name === "A poor worker" ||
+    savedProfile.title === "The first worker to rise";
+  return {
+    ...historical,
+    ...savedProfile,
+    name: legacyProfile ? historical.name : savedProfile.name,
+    title:
+      !savedProfile.title || savedProfile.title === "The first worker to rise"
+        ? historical.title
+        : savedProfile.title,
+    rank: legacyProfile ? "Commander" : savedProfile.rank || "Commander",
+    color: savedProfile.color || civ?.color || "#b89b5d",
+    symbol: savedProfile.symbol || civ?.symbol || "crown",
+  };
+}
+// A new campaign/story game begins with its historical commander carrying only
+// the tools of their period. The kit is chosen by the civilization's start year.
 export const ERA_KITS = [
   {
     id: "stone",
@@ -351,6 +416,11 @@ export function historicalAgeFor(year = -400) {
   return { index: 6, label: "Industrial Age" };
 }
 export const WORKER_ROLES = {
+  commander: {
+    name: "Commander",
+    icon: "Crown",
+    description: "The founder and leader of your growing realm.",
+  },
   worker: {
     name: "Poor Worker",
     icon: "Pickaxe",
@@ -366,7 +436,8 @@ export const WORKER_ROLES = {
     name: "Miner",
     icon: "Mountain",
     rate: { stone: 0.3, silver: 0.05 },
-    description: "Cracks stone and pans silver veins. +0.3 stone/s, +0.05 silver/s.",
+    description:
+      "Cracks stone and pans silver veins. +0.3 stone/s, +0.05 silver/s.",
   },
   hunter: {
     name: "Hunter",
@@ -399,7 +470,8 @@ export const WORKER_ROLES = {
     capacity: 2,
     requires: "hut",
     female: true,
-    description: "Tends a mini-house. +2 population capacity each. Needs a hut.",
+    description:
+      "Tends a mini-house. +2 population capacity each. Needs a hut.",
   },
   archer: {
     name: "Archer",
@@ -409,11 +481,32 @@ export const WORKER_ROLES = {
   },
 };
 export const VILLAGER_NAMES = [
-  "Bran", "Sela", "Tamo", "Iva", "Korin", "Mira", "Dax", "Lena",
-  "Rurik", "Anka", "Peto", "Vela", "Osman", "Greta", "Cade", "Nia",
+  "Bran",
+  "Sela",
+  "Tamo",
+  "Iva",
+  "Korin",
+  "Mira",
+  "Dax",
+  "Lena",
+  "Rurik",
+  "Anka",
+  "Peto",
+  "Vela",
+  "Osman",
+  "Greta",
+  "Cade",
+  "Nia",
 ];
 export const FOUND_ITEMS = [
-  "flint", "hide", "herbs", "iron_ore", "berries", "clay", "feathers", "amber",
+  "flint",
+  "hide",
+  "herbs",
+  "iron_ore",
+  "berries",
+  "clay",
+  "feathers",
+  "amber",
 ];
 export const BUILDINGS = [
   {

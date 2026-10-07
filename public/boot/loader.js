@@ -66,7 +66,7 @@
           statusEl.textContent =
             opts.doneStatus || "Opening the kingdom gate...";
         setTimeout(function () {
-          window.location.href = opts.target || "auth.html";
+          window.location.href = opts.target || "index.html";
         }, 700);
         return;
       }

@@ -124,10 +124,11 @@ export default forwardRef(function Battlefield(
     sun.shadow.bias = -0.0005;
     sun.shadow.normalBias = 0.15;
     scene.add(sun);
-    const { world, land, water } = makeWorld(
+    const { world, land, water, infrastructure } = makeWorld(
       scene,
       game.civilization,
       settings.graphics,
+      !game.kingdomAwakened,
     );
     const effects = [],
       dying = [];
@@ -317,7 +318,7 @@ export default forwardRef(function Battlefield(
     function addEntity(id, model, data, labelText, labelClass) {
       model.userData.entity = data;
       const ring = selectionRing(
-        data.kind === "army" ? 2 : 4,
+        data.kind === "army" ? 3.2 : data.kind === "worker" ? 0.8 : 4,
         data.enemy ? "#d89077" : "#d9d0a2",
       );
       model.add(ring);
@@ -346,7 +347,9 @@ export default forwardRef(function Battlefield(
       frameCount++;
       const l = latest.current,
         g = l.game;
-      const speed = ((0.12 + l.settings.camera * 0.003) / camera.zoom) * frameScale;
+      infrastructure.visible = !!g.kingdomAwakened;
+      const speed =
+        ((0.12 + l.settings.camera * 0.003) / camera.zoom) * frameScale;
       if (keys.has("w") || keys.has("arrowup")) target.z -= speed;
       if (keys.has("s") || keys.has("arrowdown")) target.z += speed;
       if (keys.has("a") || keys.has("arrowleft")) target.x -= speed;
@@ -442,7 +445,10 @@ export default forwardRef(function Battlefield(
           damage.textContent = `−${Math.round(en.lastHp - a.hp)}`;
           en.label.appendChild(damage);
           setTimeout(() => damage.remove(), 900);
-          playSfx(a.character && a.character.includes("archer") ? "arrow" : "clash", l.settings.sound);
+          playSfx(
+            a.character && a.character.includes("archer") ? "arrow" : "clash",
+            l.settings.sound,
+          );
         }
         if (a.status === "Fighting" && en.lastStatus !== "Fighting") {
           playSfx("horn", l.settings.sound);
@@ -506,7 +512,11 @@ export default forwardRef(function Battlefield(
           en = null;
         }
         if (!en) {
-          const model = workerModel(w.role, w.gender);
+          const model = workerModel(
+            w.role,
+            w.gender,
+            w.role === "commander" ? g.hero : undefined,
+          );
           model.position.set(w.x, height(w.x, w.z), w.z);
           en = addEntity(
             w.id,
@@ -532,7 +542,7 @@ export default forwardRef(function Battlefield(
         en.label.title = `${w.name} · ${w.role}`;
         en.label.querySelector("i").style.width =
           `${Math.max(0, (w.hp / w.maxHp) * 100)}%`;
-        positionLabel(en, pos.x, pos.z, 2.6);
+        positionLabel(en, pos.x, pos.z, w.role === "commander" ? 3.2 : 2.6);
       }
       for (const [id, en] of rt.models) {
         if (!live.has(id)) {
@@ -603,7 +613,7 @@ export default forwardRef(function Battlefield(
     <div
       className={`battlefield ${placing ? "is-placing" : ""}`}
       ref={host}
-      aria-label="Interactive elevated strategy map. Drag to pan, scroll to zoom, select an army and right click to move."
+      aria-label="Interactive elevated strategy map. Drag to pan, scroll to zoom, select a friendly unit and right click to move it."
     />
   );
 });

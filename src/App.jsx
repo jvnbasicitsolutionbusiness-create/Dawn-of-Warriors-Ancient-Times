@@ -21,8 +21,15 @@ import {
   ProfilePanel,
   ExtrasPanel,
 } from "./components/WorldPanels";
-import { AuthPanel, SettingsPanel } from "./components/AccountPanels";
-import { api } from "./services/api";
+import { SettingsPanel } from "./components/AccountPanels";
+import {
+  getGame,
+  getSettings,
+  performAction,
+  saveGame,
+  saveSettings,
+  startGame,
+} from "./services/localData";
 import {
   music,
   chime,
@@ -37,8 +44,16 @@ import {
   TECHNOLOGIES,
   DEFAULT_SETTINGS,
   WORKER_ROLES,
+  commanderFor,
+  commanderProfileFor,
 } from "../shared/catalog";
 const format = (n) => Math.floor(n).toLocaleString("en-US");
+const localCommander = {
+  id: "local",
+  name: "Local Commander",
+  username: "Local commander",
+  guest: true,
+};
 const tutorial = [
   [
     "Survey your kingdom",
@@ -87,7 +102,7 @@ const tutorial = [
   ],
   [
     "Protect your legacy",
-    "Use Save in the top-right corner. Progress is also persisted automatically on the server. Register an account to retain access across devices.",
+    "Use Save in the top-right corner. Your progress is saved automatically in this browser. Clearing browser data removes local saves.",
     "Save",
   ],
 ];
@@ -122,12 +137,7 @@ export default function App() {
     gameRef = useRef(),
     toastTimers = useRef([]);
   gameRef.current = game;
-  const audioScene =
-    modal === "auth" || modal === "reset"
-      ? "auth"
-      : game
-        ? "gameplay"
-        : "lobby";
+  const audioScene = game ? "gameplay" : "lobby";
   const toast = useCallback((text, type = "success") => {
     const id = Date.now() + Math.random();
     setToasts((v) => [...v.slice(-2), { id, text, type }]);
@@ -139,8 +149,19 @@ export default function App() {
     setUser(u);
     setSequence("preparing");
     setBooting(true);
-    const [g, s] = await Promise.all([api("/game"), api("/settings")]);
+    const [g, s] = await Promise.all([getGame(), getSettings()]);
+    setError("");
     setGame(g);
+    const firstArmy = g.armies.find((army) => !army.enemy);
+    const firstWorker =
+      g.workers.find((worker) => worker.role === "commander") || g.workers[0];
+    setSelected(
+      firstArmy
+        ? { kind: "army", id: firstArmy.id, ids: [firstArmy.id] }
+        : firstWorker
+          ? { kind: "worker", id: firstWorker.id }
+          : null,
+    );
     setSettings(s);
     setExited(false);
     setTimeout(() => {
@@ -150,30 +171,16 @@ export default function App() {
   }
   useEffect(() => {
     if (sequence === "boot") {
-      const t = setTimeout(() => setSequence("auth"), 1500);
+      const t = setTimeout(() => setSequence("lobby"), 1500);
       return () => clearTimeout(t);
     }
   }, [sequence]);
   useEffect(() => {
-    if (sequence === "auth" && !user && !game) setModal("auth");
-  }, [sequence, user, game]);
-  useEffect(() => {
     let active = true;
     async function init() {
       try {
-        const query = new URLSearchParams(window.location.search);
-        let r;
-        if (query.has("verify")) {
-          r = await api("/auth/verify", { token: query.get("verify") });
-          window.history.replaceState({}, "", window.location.pathname);
-          toast("Email verified. Your account is ready.");
-        } else {
-          r = await api("/auth/me");
-          if (!r.user) r = await api("/auth/guest", {});
-        }
         if (active) {
-          await load(r.user);
-          if (query.has("reset")) setModal("reset");
+          await load(localCommander);
         }
       } catch (e) {
         if (active) {
@@ -197,7 +204,7 @@ export default function App() {
       if (pending || document.hidden) return;
       pending = true;
       try {
-        const g = await api("/game");
+        const g = getGame();
         if (alive) {
           const prev = gameRef.current;
           if (prev && g.kills > prev.kills) {
@@ -216,9 +223,24 @@ export default function App() {
             playSfx("research", settings.sound);
           }
 
-          const inBattle = g.armies.some(a => !a.enemy && (a.status === "Fighting" || a.status === "Engaged"));
-          const nearThreat = g.armies.some(a => !a.enemy && g.armies.some(e => e.enemy && Math.hypot(a.x - e.x, a.z - e.z) < 14));
-          setMusicMood(inBattle || nearThreat ? "battle" : g.outcome === "victory" ? "victory" : "ambient");
+          const inBattle = g.armies.some(
+            (a) =>
+              !a.enemy && (a.status === "Fighting" || a.status === "Engaged"),
+          );
+          const nearThreat = g.armies.some(
+            (a) =>
+              !a.enemy &&
+              g.armies.some(
+                (e) => e.enemy && Math.hypot(a.x - e.x, a.z - e.z) < 14,
+              ),
+          );
+          setMusicMood(
+            inBattle || nearThreat
+              ? "battle"
+              : g.outcome === "victory"
+                ? "victory"
+                : "ambient",
+          );
 
           setGame(g);
           setError("");
@@ -259,7 +281,9 @@ export default function App() {
   }, [audio, settings.music]);
   useEffect(() => {
     const handleGlobalClick = (e) => {
-      const btn = e.target.closest("button, .btn, .tab, .chip, [role='button']");
+      const btn = e.target.closest(
+        "button, .btn, .tab, .chip, [role='button']",
+      );
       if (btn && !btn.disabled) {
         playSfx("click", settings.sound);
       }
@@ -273,17 +297,20 @@ export default function App() {
       settings.reducedMotion,
     );
   }, [settings.reducedMotion]);
-  const open = useCallback((name) => {
-    playSfx("click", settings.sound);
-    setModal(name);
-    setPlacing(null);
-    setMarchMode(false);
-    setMobileNav(false);
-  }, [settings.sound]);
+  const open = useCallback(
+    (name) => {
+      playSfx("click", settings.sound);
+      setModal(name);
+      setPlacing(null);
+      setMarchMode(false);
+      setMobileNav(false);
+    },
+    [settings.sound],
+  );
   const command = useCallback(
     async (type, data = {}) => {
       try {
-        const g = await api("/game/action", { type, data });
+        const g = performAction(type, data);
         setGame(g);
 
         if (type === "recruit") playSfx("recruit", settings.sound);
@@ -293,14 +320,16 @@ export default function App() {
         else if (type === "hold") playSfx("order", settings.sound);
         else if (type === "retreat") playSfx("horn", settings.sound);
         else if (type === "formation") playSfx("order", settings.sound);
-        else if (type === "gather") playSfx("gather_" + (data.resource || "wood"), settings.sound);
+        else if (type === "gather")
+          playSfx("gather_" + (data.resource || "wood"), settings.sound);
         else if (type === "assign") playSfx("task", settings.sound);
         else if (type === "claim") playSfx("victory", settings.sound);
         else if (type === "upgrade") playSfx("complete", settings.sound);
         else if (type === "repair") playSfx("task", settings.sound);
         else if (type === "trade") playSfx("gather_gold", settings.sound);
         else if (type === "diplomacy") playSfx("horn", settings.sound);
-        else if (!["tutorial", "pause"].includes(type)) playSfx("click", settings.sound);
+        else if (!["tutorial", "pause"].includes(type))
+          playSfx("click", settings.sound);
 
         if (!["move", "tutorial", "hold", "pause"].includes(type)) {
           if (settings.notifications)
@@ -330,7 +359,7 @@ export default function App() {
   );
   async function start(civ, mode) {
     try {
-      const g = await api("/game/new", { civilization: civ, mode });
+      const g = startGame(civ, mode);
       setGame(g);
       setReady(false);
       setSelected(
@@ -342,7 +371,7 @@ export default function App() {
       toast(
         mode === "starter"
           ? `Your standard rises over ${CIVILIZATIONS.find((c) => c.id === civ).capital}.`
-          : `One poor worker begins alone in the ${CIVILIZATIONS.find((c) => c.id === civ).era}.`,
+          : `${commanderFor(civ).name} begins alone in the ${CIVILIZATIONS.find((c) => c.id === civ).era}.`,
       );
     } catch (e) {
       toast(e.message, "error");
@@ -350,19 +379,16 @@ export default function App() {
   }
   async function save() {
     try {
-      const r = await api("/game/save", {});
+      const r = saveGame();
       setSaved(r.savedAt);
-      toast("Empire saved securely to the database.");
+      toast("Empire saved in this browser.");
     } catch (e) {
       toast(e.message, "error");
     }
   }
-  async function logout(all = false, deleted = false) {
+  async function logout() {
     try {
-      if (!deleted) {
-        await api("/game/save", {});
-        await api(all ? "/auth/logout-all" : "/auth/logout", {});
-      }
+      saveGame();
       setModal(null);
       setUser(null);
       setGame(null);
@@ -375,8 +401,7 @@ export default function App() {
   async function enterGuest() {
     setBooting(true);
     try {
-      const r = await api("/auth/guest", {});
-      await load(r.user);
+      await load(localCommander);
     } catch (e) {
       setError(e.message);
       setBooting(false);
@@ -398,11 +423,22 @@ export default function App() {
     } else setSelected(entity);
   }
   function move(x, z) {
-    if (!selected || selected.kind !== "army" || selected.enemy) {
-      toast("Select a friendly cohort first.", "error");
+    if (
+      !selected ||
+      !["army", "worker"].includes(selected.kind) ||
+      selected.enemy
+    ) {
+      toast("Select a friendly unit or your commander first.", "error");
       return;
     }
-    command("move", { ids: selected.ids || [selected.id], x, z });
+    command("move", {
+      ids:
+        selected.kind === "army"
+          ? selected.ids || [selected.id]
+          : [selected.id],
+      x,
+      z,
+    });
     setMarchMode(false);
   }
   async function place(type, x, z) {
@@ -430,8 +466,6 @@ export default function App() {
     profile: "A commander’s legacy",
     settings: "Make it your world",
     extras: "The chronicles",
-    auth: "Your empire awaits",
-    reset: "Account recovery",
     help: "The commander’s handbook",
     events: "Dispatches from the valley",
     diplomacy: "At the negotiating table",
@@ -459,7 +493,7 @@ export default function App() {
       <div className="welcome-screen">
         <img
           className="welcome-bg"
-          src="/assets/kingdom.jpg"
+          src="./assets/kingdom.jpg"
           alt="Ancient kingdom"
         />
         <div className="welcome-content">
@@ -473,33 +507,15 @@ export default function App() {
           <h2>ANCIENT TIMES</h2>
           <p>The world remembers those who dared.</p>
           {error && <div className="form-message error">{error}</div>}
-          <Button
-            variant="gold"
-            icon="ArrowRight"
-            onClick={() => setModal("auth")}
-          >
-            Sign in to your empire
+          <Button variant="gold" icon="Compass" onClick={enterGuest}>
+            Continue to your local campaign
           </Button>
-          <Button icon="Compass" onClick={enterGuest}>
-            Explore as a guest
-          </Button>
-          <small>
-            Guest progress is server-saved but depends on this browser session.
-          </small>
+          <small>This campaign is saved locally in this browser.</small>
         </div>
-        {modal === "auth" && (
-          <Modal title="Your empire awaits" onClose={close} wide>
-            <AuthPanel
-              onAuthenticated={async (u) => {
-                await load(u);
-                close();
-              }}
-            />
-          </Modal>
-        )}
       </div>
     );
   const civ = CIVILIZATIONS.find((c) => c.id === game.civilization),
+    commander = commanderProfileFor(game.civilization, game.hero || {}),
     army =
       selected?.kind === "army"
         ? game.armies.find((a) => a.id === selected.id)
@@ -525,7 +541,7 @@ export default function App() {
       ? [
           game.constructed.includes("farm"),
           game.recruited > 0,
-          game.sites[0].owner === "player",
+          game.sites[0]?.owner === "player",
         ]
       : [
           game.resources.food > 0 || game.resources.wood > 0,
@@ -691,7 +707,11 @@ export default function App() {
                   try {
                     localStorage.setItem(
                       "dow_audio_config",
-                      JSON.stringify({ music: next, sfx: true, volume: settings.music }),
+                      JSON.stringify({
+                        music: next,
+                        sfx: true,
+                        volume: settings.music,
+                      }),
                     );
                   } catch {}
                   return next;
@@ -721,7 +741,7 @@ export default function App() {
               onClick={() => open("profile")}
               aria-label="Character profile"
             >
-              <img src="/assets/commander.jpg" alt="Your commander" />
+              <Portrait character={{ ...commander, class: "Commander" }} />
               <span>
                 {1 +
                   Math.floor(
@@ -826,7 +846,7 @@ export default function App() {
               <p>
                 {game.mode !== "starter" &&
                 !game.buildings.some((b) => b.id === "capital")
-                  ? "One poor worker. No supplies. Everything must be earned."
+                  ? "Your commander stands alone. No supplies. Everything must be earned."
                   : "The heart of a rising civilization."}
               </p>
               <div className="empire-metrics">
@@ -978,7 +998,9 @@ export default function App() {
               <span>
                 {placing
                   ? `Place ${BUILDINGS.find((b) => b.id === placing).name} within your borders`
-                  : "Tap the map to order your selected cohorts to march"}
+                  : selected?.kind === "worker"
+                    ? "Tap the map to move your selected villager or commander"
+                    : "Tap the map to order your selected cohorts to march"}
               </span>
               <button
                 onClick={() => {
@@ -1037,7 +1059,7 @@ export default function App() {
             </div>
             <span className="map-help">
               <Icon name="MousePointer2" size={12} /> Drag to pan<span>·</span>
-              Scroll to zoom<span>·</span>Right-click to march
+              Scroll to zoom<span>·</span>Right-click to move selected units
             </span>
           </div>
           <div className="map-bottom-right">
@@ -1277,12 +1299,14 @@ export default function App() {
                     </div>
                     <span>{worker.hp}</span>
                   </div>
-                  <button
-                    className="text-btn gold-text"
-                    onClick={() => open("workforce")}
-                  >
-                    Assign a role <Icon name="ArrowRight" size={13} />
-                  </button>
+                  {worker.role !== "commander" && (
+                    <button
+                      className="text-btn gold-text"
+                      onClick={() => open("workforce")}
+                    >
+                      Assign a role <Icon name="ArrowRight" size={13} />
+                    </button>
+                  )}
                 </div>
               </>
             ) : site ? (
@@ -1358,6 +1382,17 @@ export default function App() {
               </>
             ) : worker ? (
               <>
+                <button
+                  onClick={() => {
+                    setMarchMode(true);
+                    setPlacing(null);
+                    playSfx("order", settings.sound);
+                  }}
+                  title="Choose a destination for this person"
+                >
+                  <Icon name="Move" />
+                  <span>Move</span>
+                </button>
                 <button
                   onClick={() => command("gather", { resource: "wood" })}
                   title="Chop timber (+4 wood)"
@@ -1485,18 +1520,13 @@ export default function App() {
         <div className="statusbar">
           <div>
             <span className="connection-dot" />
-            {error ? "CONNECTION INTERRUPTED" : "CONNECTED TO YOUR KINGDOM"}
+            {error ? "LOCAL SAVE ISSUE" : "LOCAL CAMPAIGN"}
             <span className="status-divider">|</span>
             <span>
               {user.guest
-                ? "Guest campaign · Register to protect your legacy"
+                ? "Saved in this browser · not synced between devices"
                 : `Signed in as ${user.username}`}
             </span>
-            {user.guest && (
-              <button onClick={() => open("auth")}>
-                Create account <Icon name="ArrowUpRight" size={10} />
-              </button>
-            )}
           </div>
           <div>
             <button onClick={() => open("diplomacy")}>
@@ -1506,7 +1536,7 @@ export default function App() {
                 : "Diplomacy"}
             </button>
             <span className="status-divider">|</span>
-            <span>Server autosave enabled</span>
+            <span>Browser autosave enabled</span>
             <Icon name="CheckCheck" size={13} />
           </div>
         </div>
@@ -1571,27 +1601,13 @@ export default function App() {
           {modal === "settings" && (
             <SettingsPanel
               settings={settings}
-              user={user}
               onSave={async (v) => {
-                const s = await api("/settings", v, "PUT");
+                const s = saveSettings(v);
                 setSettings(s);
               }}
-              onLogout={logout}
               toast={toast}
-              open={open}
               audio={audio}
               setAudio={setAudio}
-            />
-          )}
-          {(modal === "auth" || modal === "reset") && (
-            <AuthPanel
-              initial={modal === "reset" ? "reset" : "register"}
-              token={new URLSearchParams(location.search).get("reset")}
-              onAuthenticated={async (u) => {
-                await load(u);
-                close();
-                toast("Welcome, commander. Your empire is ready.");
-              }}
             />
           )}
           {modal === "quit" && (
@@ -1600,35 +1616,17 @@ export default function App() {
                 <Icon name="Sun" size={46} />
               </div>
               <h3>Your kingdom will await your return.</h3>
-              <p>
-                We’ll save your progress to the server before signing you out.
-              </p>
-              {user.guest && (
-                <div className="notice warning">
-                  <Icon name="TriangleAlert" />
-                  You are playing as a guest. Register before leaving to keep
-                  access to this empire after your session is removed.
-                </div>
-              )}
+              <p>Your progress is saved in this browser automatically.</p>
+              <div className="notice">
+                <Icon name="Info" />
+                Local saves are not synced between devices. Clearing browser
+                data removes this campaign.
+              </div>
               <div className="quit-actions">
                 <Button onClick={close}>Stay in the valley</Button>
-                {user.guest ? (
-                  <>
-                    <Button variant="gold" onClick={() => open("auth")}>
-                      Secure my empire
-                    </Button>
-                    <button
-                      className="text-btn danger-text"
-                      onClick={() => logout()}
-                    >
-                      Sign out of guest session anyway
-                    </button>
-                  </>
-                ) : (
-                  <Button variant="gold" icon="Save" onClick={() => logout()}>
-                    Save & sign out
-                  </Button>
-                )}
+                <Button variant="gold" icon="Save" onClick={() => logout()}>
+                  Save & return to title
+                </Button>
               </div>
             </div>
           )}
@@ -1760,7 +1758,7 @@ export default function App() {
         <div className="main-menu">
           <img
             className="menu-bg"
-            src="/assets/kingdom.jpg"
+            src="./assets/kingdom.jpg"
             alt="The ancient kingdom of Aurelia"
           />
           <div className="menu-shade" />
@@ -1795,9 +1793,7 @@ export default function App() {
               ].map(([label, target, icon], i) => (
                 <button
                   key={label}
-                  onClick={() =>
-                    target === "resume" ? close() : open(target)
-                  }
+                  onClick={() => (target === "resume" ? close() : open(target))}
                 >
                   <span className="menu-index">0{i + 1}</span>
                   <Icon name={icon} size={18} />
@@ -1845,7 +1841,7 @@ export default function App() {
       {error && (
         <div className="connection-error">
           <Icon name="TriangleAlert" size={16} />
-          {error} · Reconnecting…
+          {error}
         </div>
       )}
     </div>

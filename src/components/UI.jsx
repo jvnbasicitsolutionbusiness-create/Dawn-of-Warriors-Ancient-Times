@@ -300,11 +300,44 @@ export function Modal({
 export function Portrait({ character, large = false }) {
   if (!character || character.class === "Commander")
     return (
-      <div className={`portrait ${large ? "large" : ""}`}>
-        <img
-          src="/assets/commander.jpg"
-          alt={character?.name || "Commander Aelius Valerius"}
-        />
+      <div
+        className={`portrait illustrated commander-portrait ${large ? "large" : ""}`}
+        style={{ "--faction": character?.color || "#b89b5d" }}
+      >
+        <svg
+          viewBox="0 0 120 130"
+          role="img"
+          aria-label={character?.name || "Uncrowned founder"}
+        >
+          <rect width="120" height="130" fill="#1c302f" />
+          <circle cx="60" cy="54" r="42" fill="var(--faction)" opacity=".26" />
+          <path d="M13 130Q17 88 42 82H78Q103 89 108 130" fill="#6c3035" />
+          <path d="M28 130 41 90 60 105 79 90 93 130" fill="var(--faction)" />
+          <path d="M43 82V64H77V83L60 96Z" fill="#b79570" />
+          <path
+            d="M41 57Q40 27 60 27T79 57L75 74Q60 91 45 73Z"
+            fill="#c8ad86"
+          />
+          <path
+            d="M39 49 37 37 46 40 48 32 59 38 65 30 72 39 82 34 81 53 74 46 46 46Z"
+            fill="var(--faction)"
+          />
+          <path
+            d="M43 32 43 20 52 29 60 15 68 29 78 20 78 34Z"
+            fill="#e4ca84"
+          />
+          <path d="M45 70Q60 78 75 70L71 82 60 91 49 82Z" fill="#806044" />
+          <text
+            x="60"
+            y="119"
+            textAnchor="middle"
+            fill="#f0dfb6"
+            fontSize="9"
+            letterSpacing="1"
+          >
+            {character?.symbol || "FOUNDER"}
+          </text>
+        </svg>
       </div>
     );
   const c = character.appearance.color;

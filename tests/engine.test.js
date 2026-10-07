@@ -5,15 +5,20 @@ import {
   action,
   step,
   makeArmy,
+  makeWorker,
   rates,
   publicGame,
-} from "../server/engine.js";
+} from "../shared/engine.js";
 import {
   CHARACTERS,
   BUILDINGS,
   TECHNOLOGIES,
   CIVILIZATIONS,
+  commanderFor,
+  commanderProfileFor,
 } from "../shared/catalog.js";
+import { armyModel, workerModel } from "../src/game/scene.js";
+import * as THREE from "three";
 const advance = (s, n) => {
   for (let i = 0; i < n; i++) step(s);
 };
@@ -31,7 +36,7 @@ test("every building and technology has a valid catalog reference", () => {
   for (const c of CHARACTERS)
     assert.ok(BUILDINGS.some((b) => b.id === c.building));
 });
-test("server computes starting population, storage, and resource production", () => {
+test("game engine computes starting population, storage, and resource production", () => {
   const s = newGame();
   assert.equal(publicGame(s).population, 12);
   assert.equal(publicGame(s).capacity, 40);
@@ -191,10 +196,17 @@ test("truce stops combat and expires after the negotiated period", () => {
   assert.equal(s.diplomacy, "war");
   assert.ok(s.armies[0].hp < hp);
 });
-test("story rewards require server-owned objectives and cannot be replayed", () => {
+test("story rewards require completed objectives and cannot be replayed", () => {
   const s = newGame("aurelia", "story");
   assert.throws(() => action(s, "claim"), /objectives/);
-  s.resources = { food: 150, wood: 150, stone: 100, gold: 100, silver: 0, meat: 0 };
+  s.resources = {
+    food: 150,
+    wood: 150,
+    stone: 100,
+    gold: 100,
+    silver: 0,
+    meat: 0,
+  };
   s.buildings.push(
     {
       id: "capital",
@@ -223,6 +235,9 @@ test("story rewards require server-owned objectives and cannot be replayed", () 
   action(s, "claim");
   assert.equal(s.chapter, 1);
   assert.deepEqual(s.completedChapters, [0]);
+  assert.throws(() => action(s, "claim"), /Found a kingdom/);
+  s.kingdomAwakened = true;
+  s.sites = [{ owner: "enemy" }, { owner: "enemy" }];
   assert.throws(() => action(s, "claim"), /objectives/);
   assert.throws(() => action(newGame(), "claim"), /Story Mode/);
 });
@@ -254,22 +269,121 @@ test("campaign and story starts are empty forest camps with one era-equipped wor
     });
     assert.equal(s.buildings.length, 0);
     assert.equal(s.workers.length, 1);
+    assert.equal(s.workers[0].role, "commander");
     assert.equal(s.armies.filter((army) => !army.enemy).length, 0);
+    assert.equal(s.armies.filter((army) => army.enemy).length, 0);
+    assert.deepEqual(s.sites, []);
     assert.ok(s.inventory.includes("pickaxe"));
     assert.ok(s.inventory.includes("bow"));
   }
+});
+test("the founder can move independently before any armies or enemies exist", () => {
+  const s = newGame("mongol", "campaign");
+  const founder = s.workers[0];
+  const start = { x: founder.x, z: founder.z };
+  action(s, "move", { ids: [founder.id], x: -5, z: 7 });
+  assert.equal(founder.status, "Marching");
+  step(s);
+  assert.notDeepEqual({ x: founder.x, z: founder.z }, start);
+});
+test("founder can establish a first town center with gathered local materials", () => {
+  const s = newGame("mongol", "campaign");
+  s.resources.wood = 150;
+  s.resources.stone = 100;
+  action(s, "build", { building: "towncenter", x: -15, z: 7 });
+  assert.equal(s.buildings[0].id, "capital");
+  assert.equal(s.buildings[0].readyAt, 30);
+  assert.equal(s.resources.wood, 0);
+  assert.equal(s.resources.stone, 0);
+  assert.equal(s.resources.gold, 0);
+});
+test("selected empires start with distinct historical commander identities", () => {
+  assert.equal(newGame("mongol", "campaign").hero.name, "Genghis Khan");
+  assert.equal(newGame("qin", "campaign").hero.name, "Qin Shi Huang");
+  assert.notEqual(commanderFor("mongol").name, commanderFor("qin").name);
+  for (const civilization of CIVILIZATIONS) {
+    assert.notEqual(commanderFor(civilization.id).name, "The First Founder");
+    const profile = commanderProfileFor(civilization.id, {
+      name: "A poor worker",
+      title: "The first worker to rise",
+    });
+    assert.equal(profile.name, commanderFor(civilization.id).name);
+    assert.equal(profile.color, civilization.color);
+  }
+});
+test("enemy sites and forces only awaken after a capital, four buildings, and 12 people", () => {
+  const s = newGame("aurelia", "campaign");
+  for (let i = 0; i < 11; i++) s.workers.push(makeWorker(`Settler ${i}`));
+  s.buildings.push(
+    ...["capital", "farm", "hut"].map((id) => ({
+      id,
+      type: id === "capital" ? "towncenter" : id,
+      x: -15 + s.buildings.length,
+      z: 7,
+      level: 1,
+      hp: 500,
+      maxHp: 500,
+      readyAt: 0,
+    })),
+  );
+  step(s);
+  assert.equal(s.kingdomAwakened, false);
+  s.buildings.push({
+    id: "lumber",
+    type: "lumber",
+    x: -4,
+    z: 7,
+    level: 1,
+    hp: 500,
+    maxHp: 500,
+    readyAt: 0,
+  });
+  step(s);
+  assert.equal(s.kingdomAwakened, true);
+  assert.equal(s.sites.length, 3);
+  assert.equal(s.armies.filter((army) => army.enemy).length, 3);
+});
+test("army models render assembled troop meshes rather than flat sprites", () => {
+  const model = armyModel(
+    CHARACTERS.find((character) => character.id === "unit-0-0"),
+  );
+  const meshes = [];
+  model.traverse((object) => {
+    if (object.isMesh) meshes.push(object);
+    assert.ok(!object.isSprite);
+  });
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3());
+  assert.ok(meshes.length >= 6);
+  assert.ok(size.x > 4);
+});
+test("the historical commander renders as a distinctly enlarged map figure", () => {
+  const model = workerModel("commander", "m", {
+    color: "#cdb680",
+    symbol: "horse",
+  });
+  const size = new THREE.Box3()
+    .setFromObject(model)
+    .getSize(new THREE.Vector3());
+  assert.ok(size.y > 2.5);
 });
 test("a lone founder can gather resources, hire workers, and assign camp roles", () => {
   const s = newGame("aurelia", "campaign");
   action(s, "gather", { resource: "wood" });
   assert.equal(s.resources.wood, 4);
-  action(s, "assign", { workerId: s.workers[0].id, role: "lumberjack" });
-  assert.equal(rates(s).wood, 0.4);
+  assert.equal(s.workers[0].role, "commander");
+  assert.throws(
+    () =>
+      action(s, "assign", { workerId: s.workers[0].id, role: "lumberjack" }),
+    /cannot be reassigned/,
+  );
   s.resources.food = 30;
   s.resources.meat = 10;
   action(s, "hire");
   assert.equal(s.workers.length, 2);
   assert.equal(s.workers[1].role, "worker");
+  action(s, "assign", { workerId: s.workers[1].id, role: "lumberjack" });
+  assert.equal(rates(s).wood, 0.4);
 });
 test("paused simulations do not advance and saves roundtrip without lost state", () => {
   const s = newGame();

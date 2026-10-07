@@ -6,9 +6,10 @@ import {
   TECHNOLOGIES,
   WORKER_ROLES,
   eraKitFor,
+  commanderFor,
+  commanderProfileFor,
 } from "../../shared/catalog";
 import { Icon, Button, Portrait } from "./UI";
-import { api } from "../services/api";
 export function WorldPanel({ game, onStart }) {
   const [selected, setSelected] = useState(game.civilization),
     [mode, setMode] = useState("campaign"),
@@ -24,7 +25,8 @@ export function WorldPanel({ game, onStart }) {
     {
       id: "campaign",
       title: "Found a Realm",
-      description: "Build a settlement from one worker and shape its future.",
+      description:
+        "Lead your civilization's historical commander from wilderness to empire.",
       icon: "Landmark",
     },
     {
@@ -286,7 +288,7 @@ export function WorldPanel({ game, onStart }) {
                 ? "Command a ready army, defend your capital, and capture the nearby outpost."
                 : mode === "story"
                   ? "Follow three original chapters through a struggle for the future of Aurelia."
-                  : `Begin in the ${eraKitFor(civ.startYear).label} with one poor worker, no settlement, and only period tools: ${eraKitFor(civ.startYear).kit.join(", ")}.`}
+                  : `Begin in the ${eraKitFor(civ.startYear).label} with ${commanderFor(civ.id).name} alone in the wilderness, no settlement, and only period tools: ${eraKitFor(civ.startYear).kit.join(", ")}.`}
           </p>
         </div>
         <div className="flex">
@@ -294,7 +296,9 @@ export function WorldPanel({ game, onStart }) {
           <Button
             variant="gold"
             icon={confirm ? "Check" : "ArrowRight"}
-            onClick={() => (confirm ? onStart(selected, mode) : setConfirm(true))}
+            onClick={() =>
+              confirm ? onStart(selected, mode) : setConfirm(true)
+            }
           >
             {confirm
               ? mode === "starter"
@@ -339,7 +343,7 @@ export function WorkforcePanel({ game, command }) {
   return (
     <div className="workforce-panel">
       <div className="panel-intro">
-        <p>Your realm begins with one worker and nothing else.</p>
+        <p>Your historical commander begins alone in the wilderness.</p>
         <span>
           {chosenEra.label} · {workers.length} worker
           {workers.length === 1 ? "" : "s"} · {game.population}/{game.capacity}{" "}
@@ -436,12 +440,14 @@ export function WorkforcePanel({ game, command }) {
                 <div className="worker-details">
                   <strong>{worker.name}</strong>
                   <span>
-                    {worker.gender === "f" ? "Woman" : "Man"} ·{" "}
-                    {WORKER_ROLES[worker.role]?.name || "Poor Worker"}
+                    {worker.role === "commander"
+                      ? game.hero?.title || "Realm founder"
+                      : `${worker.gender === "f" ? "Woman" : "Man"} · ${WORKER_ROLES[worker.role]?.name || "Poor Worker"}`}
                   </span>
                   <select
                     aria-label={`Assign a role to ${worker.name}`}
                     value={worker.role}
+                    disabled={worker.role === "commander"}
                     onChange={(event) =>
                       command("assign", {
                         workerId: worker.id,
@@ -451,6 +457,7 @@ export function WorkforcePanel({ game, command }) {
                   >
                     {Object.entries(WORKER_ROLES).map(([role, definition]) => {
                       const locked =
+                        role === "commander" ||
                         (definition.requires === "farm" && !hasFarm) ||
                         (definition.requires === "hut" && !hasHut) ||
                         (definition.female && worker.gender !== "f");
@@ -533,7 +540,7 @@ export function StoryPanel({ game, command, onStart }) {
     return (
       <div className="cinematic">
         <img
-          src="/assets/kingdom.jpg"
+          src="./assets/kingdom.jpg"
           alt="The armies of Aurelia march toward their distant capital"
         />
         <div className="cinematic-shade" />
@@ -574,13 +581,13 @@ export function StoryPanel({ game, command, onStart }) {
     chapter === 0
       ? game.constructed.includes("farm") && game.recruited > 0
       : chapter === 1
-        ? game.sites[0].owner === "player"
-        : game.sites[1].owner === "player";
+        ? game.sites[0]?.owner === "player"
+        : game.sites[1]?.owner === "player";
   return (
     <>
       <div className="story-hero">
         <img
-          src="/assets/kingdom.jpg"
+          src="./assets/kingdom.jpg"
           alt="An ancient kingdom in the golden light of a new dawn"
         />
         <div>
@@ -683,38 +690,33 @@ export function StoryPanel({ game, command, onStart }) {
     </>
   );
 }
-export function ProfilePanel({ game, user, open }) {
-  const [profile, setProfile] = useState(null);
-  useEffect(() => {
-    api("/profile")
-      .then(setProfile)
-      .catch(() => {});
-  }, []);
+export function ProfilePanel({ game, open }) {
   const civ = CIVILIZATIONS.find((c) => c.id === game.civilization);
-  const xp = profile?.xp || 0;
+  const commander = commanderProfileFor(game.civilization, game.hero || {});
+  const xp =
+    game.kills * 50 + game.victories * 200 + game.technologies.length * 80;
+  const level = 1 + Math.floor(xp / 300);
   return (
     <>
       <div className="profile-banner">
-        <Portrait large />
+        <Portrait large character={{ ...commander, class: "Commander" }} />
         <div>
           <span className="eyebrow">
-            {civ.name} · {user.guest ? "GUEST COMMANDER" : "VERIFIED COMMANDER"}
+            {civ.name} · {commander.rank || "COMMANDER"}
           </span>
-          <h2>{user.guest ? "Aelius Valerius" : user.name}</h2>
-          <p>Every great empire begins with a single standard.</p>
+          <h2>{commander.name}</h2>
+          <p>{commander.title || "Founder of a new realm"}</p>
           <div className="level-progress">
-            <span>LEVEL {profile?.level || 1}</span>
+            <span>LEVEL {level}</span>
             <div>
               <i style={{ width: `${(xp % 300) / 3}%` }} />
             </div>
             <span>{xp % 300} / 300 XP</span>
           </div>
-          {user.guest && (
-            <button className="text-btn gold-text" onClick={() => open("auth")}>
-              Secure your legacy — create an account{" "}
-              <Icon name="ArrowRight" size={15} />
-            </button>
-          )}
+          <p className="muted">
+            This campaign is saved in this browser and is not synced to an
+            account.
+          </p>
         </div>
       </div>
       <div className="profile-stats">
@@ -806,7 +808,7 @@ export function ExtrasPanel({ game, open }) {
     [
       "Beyond the River",
       "Capture Riverwatch.",
-      game.sites[0].owner === "player",
+      game.sites[0]?.owner === "player",
       "Swords",
     ],
     [
@@ -838,7 +840,7 @@ export function ExtrasPanel({ game, open }) {
       {tab === "Chronicles" ? (
         <div className="extras-content">
           <div className="lore-art">
-            <img src="/assets/kingdom.jpg" alt="The Aurelian valley" />
+            <img src="./assets/kingdom.jpg" alt="The Aurelian valley" />
             <span>THE CHRONICLES OF THE ANCIENT WORLD</span>
           </div>
           <h3>Before the first empire</h3>
@@ -916,7 +918,7 @@ export function ExtrasPanel({ game, open }) {
           </span>
           <p>An original ancient-world strategy experience.</p>
           <p>
-            Built with React, Three.js, Express, and SQLite.
+            Built with React and Three.js.
             <br />
             Interface icons by Lucide. Fonts by Google Fonts.
             <br />
@@ -935,8 +937,8 @@ export function ExtrasPanel({ game, open }) {
             This foundation includes three regional variations of one valley
             map, real-time cohort combat, economy, construction, research, a
             54-warrior catalog, and a three-chapter story. Expanded maps,
-            advanced AI, equipment systems, full cinematics, and two-factor
-            authentication are not yet included.
+            advanced AI, equipment systems, full cinematics, and online accounts
+            are not included in this static release.
           </div>
         </div>
       )}

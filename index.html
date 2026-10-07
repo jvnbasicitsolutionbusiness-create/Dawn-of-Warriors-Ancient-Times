@@ -6,74 +6,12 @@
     <meta name="theme-color" content="#071b1a" />
     <meta
       name="description"
-      content="DAWN OF WARRIORS: ANCIENT TIMES — The kingdom awakens. Prepare your empire, command the armies, and enter the campaign lobby."
+      content="Build an empire, command armies, and shape the ancient world in Dawn of Warriors."
     />
-    <title>DAWN OF WARRIORS: ANCIENT TIMES</title>
-    <link rel="stylesheet" href="public/boot/boot.css" />
+    <title>Dawn of Warriors · Ancient Times</title>
   </head>
-  <body data-audio-scene="lobby">
-    <canvas
-      id="pixel-bg"
-      class="pixel-bg"
-      data-scene="bronze-age"
-      aria-hidden="true"
-    ></canvas>
-    <div class="bg-shade" aria-hidden="true"></div>
-
-    <div class="boot-shell">
-      <div class="boot-card">
-        <div class="eyebrow">INITIALIZING KINGDOM</div>
-        <h1>DAWN OF</h1>
-        <div class="tagline">WARRIORS</div>
-        <div class="subline">
-          Ancient times • command your empire • forge your legacy
-        </div>
-
-        <div class="progress-wrap">
-          <div
-            class="progress"
-            role="progressbar"
-            aria-label="Initializing game assets"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow="0"
-          >
-            <span id="boot-bar"></span>
-            <div class="crate" id="boot-crate" aria-hidden="true"></div>
-          </div>
-          <div class="progress-meta">
-            <div class="status" id="boot-status">Preparing the campaign...</div>
-            <div class="pct" id="boot-pct">0%</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script src="public/boot/pixel-bg.js"></script>
-    <script src="public/boot/loader.js"></script>
-    <script src="public/boot/audio-theme.js"></script>
-    <script>
-      BootLoader.start({
-        assets: [
-          "/assets/kingdom.jpg",
-          "/assets/commander.jpg",
-          "/assets/historical/roman-empire.jpeg",
-          "/assets/historical/byzantine-empire.jpeg",
-          "/assets/historical/japanese-empire.jpeg",
-          "/assets/historical/qing-dynasty.jpeg",
-        ],
-        minMs: 6500,
-        maxMs: 12000,
-        target: "auth.html",
-        doneStatus: "Opening the kingdom gate...",
-        statuses: [
-          "Initializing game assets... waking the pixel chronicles",
-          "Surveying the historical valleys...",
-          "Sharpening spears and stacking supply crates...",
-          "Reading the empire records...",
-          "Lighting the beacon fires...",
-        ],
-      });
-    </script>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>

@@ -59,7 +59,11 @@ export function BuildPanel({ game, onPlace, command }) {
                 : !economic.includes(b.id) && !military.includes(b.id)),
         ).map((b) => {
           const locked = b.requires && !game.technologies.includes(b.requires);
-          const enough = Object.entries(b.cost).every(
+          const becomesCapital =
+            b.id === "towncenter" &&
+            !game.buildings.some((building) => building.id === "capital");
+          const cost = becomesCapital ? { wood: 150, stone: 100 } : b.cost;
+          const enough = Object.entries(cost).every(
             ([r, v]) => game.resources[r] >= v,
           );
           return (
@@ -87,7 +91,7 @@ export function BuildPanel({ game, onPlace, command }) {
                   </span>
                 )}
                 <div className="card-bottom">
-                  <Cost cost={b.cost} resources={game.resources} />
+                  <Cost cost={cost} resources={game.resources} />
                   <button
                     className="small-action"
                     disabled={locked || !enough}

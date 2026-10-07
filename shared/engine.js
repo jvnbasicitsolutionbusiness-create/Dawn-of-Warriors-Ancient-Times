@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+const randomUUID = () => globalThis.crypto.randomUUID();
 import {
   BUILDINGS,
   CHARACTERS,
@@ -10,7 +10,8 @@ import {
   FOUND_ITEMS,
   eraKitFor,
   historicalAgeFor,
-} from "../shared/catalog.js";
+  commanderFor,
+} from "./catalog.js";
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 export const riverX = (z) => 12 + Math.sin(z / 14) * 5;
 export function makeWorker(
@@ -19,9 +20,10 @@ export function makeWorker(
   gender = "m",
   x = -15,
   z = 7,
+  id = randomUUID(),
 ) {
   return {
-    id: randomUUID(),
+    id,
     name,
     role,
     gender,
@@ -55,6 +57,38 @@ export function makeArmy(character, x, z, enemy = false, id = randomUUID()) {
     cooldown: 0,
   };
 }
+const initialSites = [
+  {
+    id: "riverwatch",
+    name: "Riverwatch",
+    x: 26,
+    z: 1,
+    owner: "enemy",
+    hp: 900,
+    maxHp: 900,
+    reward: 250,
+  },
+  {
+    id: "citadel",
+    name: "Iron Citadel",
+    x: 32,
+    z: -29,
+    owner: "enemy",
+    hp: 2200,
+    maxHp: 2200,
+    reward: 700,
+  },
+  {
+    id: "sanctuary",
+    name: "Old Sanctuary",
+    x: -30,
+    z: -22,
+    owner: "neutral",
+    hp: 400,
+    maxHp: 400,
+    reward: 180,
+  },
+];
 export function newGame(civilization = "aurelia", mode = "starter") {
   const civ =
     CIVILIZATIONS.find((c) => c.id === civilization) || CIVILIZATIONS[0];
@@ -67,13 +101,14 @@ export function newGame(civilization = "aurelia", mode = "starter") {
   const now = Date.now();
   const lone = mode === "campaign" || mode === "story";
   const era = eraKitFor(civ.startYear);
+  const commander = commanderFor(civilization);
   const enemies = [
     makeArmy(`unit-${enemyFaction}-0`, 24, 1, true, "guard"),
     makeArmy(`unit-${enemyFaction}-1`, 30, -23, true, "guard2"),
     makeArmy(`unit-${enemyFaction}-2`, 35, -27, true, "guard3"),
   ];
   const armies = lone
-    ? enemies
+    ? []
     : [
         makeArmy(`unit-${faction}-0`, -14, 7, false, "legion"),
         makeArmy(`unit-${faction}-1`, -12, 5, false, "cohort2"),
@@ -124,10 +159,10 @@ export function newGame(civilization = "aurelia", mode = "starter") {
         },
       ];
   const workers = lone
-    ? [makeWorker("Ayla of the River", "worker", "f", -15, 7)]
+    ? [makeWorker(commander.name, "commander", "m", -15, 7, "commander")]
     : [];
   return {
-    version: 2,
+    version: 3,
     civilization,
     mode,
     createdAt: now,
@@ -138,56 +173,23 @@ export function newGame(civilization = "aurelia", mode = "starter") {
       ? { food: 0, wood: 0, stone: 0, gold: 0, silver: 0, meat: 0 }
       : { food: 800, wood: 980, stone: 600, gold: 400, silver: 0, meat: 0 },
     inventory: lone ? [...era.kit] : [...GAME_RULES.startingInventory],
-    hero: lone
-      ? {
-          name: "A poor worker",
-          title: `The poorest soul of the ${era.label}`,
-          rank: "Outcast",
-          kit: [...era.kit],
-          path: null,
-          empire: civ.name,
-        }
-      : {
-          ...GAME_RULES.startingHero,
-          empire: civ.name,
-          title: "The first worker to rise",
-        },
+    hero: {
+      ...commander,
+      rank: lone ? "Founder" : "Commander",
+      kit: lone ? [...era.kit] : [],
+      path: null,
+      empire: civ.name,
+      color: civ.color,
+      symbol: civ.symbol,
+      region: civ.region,
+    },
     workers,
     gatherReadyAt: 0,
+    kingdomAwakened: !lone,
+    kingdomAwakenedAt: lone ? null : 0,
     buildings,
     armies,
-    sites: [
-      {
-        id: "riverwatch",
-        name: "Riverwatch",
-        x: 26,
-        z: 1,
-        owner: "enemy",
-        hp: 900,
-        maxHp: 900,
-        reward: 250,
-      },
-      {
-        id: "citadel",
-        name: "Iron Citadel",
-        x: 32,
-        z: -29,
-        owner: "enemy",
-        hp: 2200,
-        maxHp: 2200,
-        reward: 700,
-      },
-      {
-        id: "sanctuary",
-        name: "Old Sanctuary",
-        x: -30,
-        z: -22,
-        owner: "neutral",
-        hp: 400,
-        maxHp: 400,
-        reward: 180,
-      },
-    ],
+    sites: lone ? [] : initialSites.map((site) => ({ ...site })),
     technologies: [],
     research: null,
     recruiting: [],
@@ -257,9 +259,7 @@ export function capacity(s) {
   );
 }
 export function rates(s) {
-  const lone = !s.buildings.some(
-    (b) => b.id === "capital" && !b.readyAt,
-  );
+  const lone = !s.buildings.some((b) => b.id === "capital" && !b.readyAt);
   const r = lone
     ? { food: 0, wood: 0, stone: 0, gold: 0, silver: 0, meat: 0 }
     : { food: 1, wood: 1, stone: 0.5, gold: 0.3, silver: 0, meat: 0 };
@@ -387,13 +387,13 @@ export function action(s, type, data = {}) {
       throw Error("A harbor must be near the river.");
     if (s.buildings.some((t) => dist(t, { x, z }) < 5))
       throw Error("Leave more space between your buildings.");
-    pay(s, b.cost);
+    const becomesCapital =
+      b.id === "towncenter" && !s.buildings.some((t) => t.id === "capital");
+    pay(s, becomesCapital ? { wood: 150, stone: 100 } : b.cost);
     const builders = (s.workers || []).filter(
       (w) => w.role === "builder",
     ).length;
     const time = Math.max(2, Math.round(b.time * (builders ? 0.7 : 1)));
-    const becomesCapital =
-      b.id === "towncenter" && !s.buildings.some((t) => t.id === "capital");
     s.buildings.push({
       id: becomesCapital ? "capital" : randomUUID(),
       type: b.id,
@@ -583,6 +583,8 @@ export function action(s, type, data = {}) {
   } else if (type === "assign") {
     const w = (s.workers || []).find((v) => v.id === data.workerId);
     if (!w) throw Error("No such villager.");
+    if (w.role === "commander" || data.role === "commander")
+      throw Error("The realm's commander cannot be reassigned.");
     const role = WORKER_ROLES[data.role];
     if (!role) throw Error("No such role.");
     if (role.female && w.gender !== "f")
@@ -638,13 +640,15 @@ export function action(s, type, data = {}) {
   } else if (type === "claim") {
     if (s.mode !== "story")
       throw Error("Chapter rewards are available in Story Mode.");
+    if (s.chapter > 0 && !s.kingdomAwakened)
+      throw Error("Found a kingdom before the next story chapter.");
     const ch = s.chapter;
     let valid =
       ch === 0
         ? s.constructed.includes("farm") && s.recruited > 0
         : ch === 1
-          ? s.sites[0].owner === "player"
-          : s.sites[1].owner === "player";
+          ? s.sites[0]?.owner === "player"
+          : s.sites[1]?.owner === "player";
     if (!valid || ch > 2) throw Error("Complete the chapter objectives first.");
     s.completedChapters.push(ch);
     s.chapter++;
@@ -672,6 +676,27 @@ export function step(s) {
         "success",
       );
     }
+  if (
+    !s.kingdomAwakened &&
+    s.buildings.some((b) => b.id === "capital" && !b.readyAt) &&
+    s.buildings.filter((b) => !b.readyAt).length >= 4 &&
+    population(s) >= 12
+  ) {
+    s.kingdomAwakened = true;
+    s.kingdomAwakenedAt = s.tick;
+    s.sites = initialSites.map((site) => ({ ...site }));
+    const faction = CIVILIZATIONS.findIndex((c) => c.id === s.civilization);
+    s.armies.push(
+      makeArmy(`unit-${3 + (faction % 3)}-0`, 24, 1, true, "guard"),
+      makeArmy(`unit-${3 + (faction % 3)}-1`, 30, -23, true, "guard2"),
+      makeArmy(`unit-${3 + (faction % 3)}-2`, 35, -27, true, "guard3"),
+    );
+    event(
+      s,
+      "Your growing settlement draws the attention of rival kingdoms. Scouts report enemy forces across the river.",
+      "danger",
+    );
+  }
   if (s.research && s.research.readyAt <= s.tick) {
     const id = s.research.id;
     s.technologies.push(id);
@@ -727,12 +752,15 @@ export function step(s) {
     !truce &&
     s.tick >= GAME_RULES.raidGracePeriod &&
     s.tick % GAME_RULES.raidInterval === 0 &&
-    s.sites[1].owner === "enemy" &&
+    s.kingdomAwakened &&
+    s.sites[1]?.owner === "enemy" &&
     s.armies.filter((a) => a.enemy).length < 10 &&
     s.buildings.some((b) => b.id === "capital") &&
     (s.mode === "starter" || population(s) >= 12)
   ) {
-    const f = CIVILIZATIONS.findIndex((c) => c.id === s.civilization) + 3;
+    const f =
+      3 +
+      (((CIVILIZATIONS.findIndex((c) => c.id === s.civilization) % 3) + 3) % 3);
     const wave = Math.floor(s.tick / 75);
     const role = s.tick > 300 ? [2, 4, 3, 5, 6, 7, 8][wave % 7] : wave % 2;
     const a = makeArmy(`unit-${f}-${role}`, 32, -25, true);
@@ -790,25 +818,6 @@ export function step(s) {
           if (s.civilization === "aurelia" && tc.class === "Infantry")
             defense *= 1.15;
         }
-        for (const w of s.workers || []) {
-          if (!w.path?.length) continue;
-          const p = w.path[0],
-            d = dist(w, p),
-            speed = 0.28;
-          w.status = "Marching";
-          if (d <= speed) {
-            w.x = p.x;
-            w.z = p.z;
-            w.path.shift();
-          } else {
-            w.x += ((p.x - w.x) / d) * speed;
-            w.z += ((p.z - w.z) / d) * speed;
-          }
-          if (!w.path.length) {
-            w.target = null;
-            w.status = "Idle";
-          }
-        }
         target.hp -= Math.max(5, atk - defense);
         a.cooldown = Math.ceil(c.attackSpeed);
         a.lastAttack = s.tick;
@@ -829,7 +838,7 @@ export function step(s) {
       }
     } else {
       if (a.enemy && !truce && enemies[0] && dist(a, enemies[0]) < 12) {
-        if (a.hp < a.maxHp * 0.2 && s.sites[1].owner === "enemy")
+        if (a.hp < a.maxHp * 0.2 && s.sites[1]?.owner === "enemy")
           route(a, 32, -27);
         else if (a.status !== "Marching") route(a, enemies[0].x, enemies[0].z);
       }
@@ -866,6 +875,25 @@ export function step(s) {
       dist(a, { x: -15, z: 7 }) < 12
     )
       a.hp = Math.min(a.maxHp, a.hp + 5);
+  }
+  for (const w of s.workers || []) {
+    if (!w.path?.length) continue;
+    const p = w.path[0],
+      d = dist(w, p),
+      speed = 0.28;
+    w.status = "Marching";
+    if (d <= speed) {
+      w.x = p.x;
+      w.z = p.z;
+      w.path.shift();
+    } else {
+      w.x += ((p.x - w.x) / d) * speed;
+      w.z += ((p.z - w.z) / d) * speed;
+    }
+    if (!w.path.length) {
+      w.target = null;
+      w.status = "Idle";
+    }
   }
   const campArchers = (s.workers || []).filter(
     (w) => w.role === "archer",
@@ -942,6 +970,7 @@ export function step(s) {
   }
   s.buildings = s.buildings.filter((b) => b.hp > 0);
   if (
+    s.sites.length > 0 &&
     s.sites.every((t) => t.owner === "player") &&
     s.armies.every((a) => !a.enemy)
   ) {
