@@ -332,6 +332,50 @@ function route(a, x, z) {
   a.path.push({ x, z });
   a.status = "Marching";
 }
+export function advanceMovement(s, elapsedSeconds) {
+  if (s.paused || s.outcome || elapsedSeconds <= 0) return;
+
+  function moveAlongPath(unit, speed) {
+    let distanceLeft = speed * elapsedSeconds;
+    while (distanceLeft > 0 && unit.path?.length) {
+      const waypoint = unit.path[0];
+      const distance = dist(unit, waypoint);
+      if (distance <= distanceLeft) {
+        unit.x = waypoint.x;
+        unit.z = waypoint.z;
+        unit.path.shift();
+        distanceLeft -= distance;
+      } else {
+        unit.x += ((waypoint.x - unit.x) / distance) * distanceLeft;
+        unit.z += ((waypoint.z - unit.z) / distance) * distanceLeft;
+        distanceLeft = 0;
+      }
+    }
+
+    if (unit.path?.length) {
+      unit.status = "Marching";
+    } else if (unit.target) {
+      unit.target = null;
+      unit.status = "Idle";
+    }
+  }
+
+  for (const army of s.armies) {
+    const character = CHARACTERS.find((entry) => entry.id === army.character);
+    const speed =
+      character.speed *
+      (!army.enemy && s.technologies.includes("logistics") ? 1.25 : 1) *
+      (army.formation === "defensive"
+        ? 0.7
+        : army.formation === "cavalry" &&
+            character.class.toLowerCase().includes("cavalry")
+          ? 1.3
+          : 1) *
+      0.7;
+    moveAlongPath(army, speed);
+  }
+  for (const worker of s.workers || []) moveAlongPath(worker, 0.28);
+}
 export function action(s, type, data = {}) {
   if (s.outcome && !["tutorial", "pause", "claim"].includes(type))
     throw Error(
@@ -658,7 +702,7 @@ export function action(s, type, data = {}) {
   s.updatedAt = Date.now();
   return s;
 }
-export function step(s) {
+export function step(s, movementSeconds = 1) {
   if (s.paused || s.outcome) return;
   s.tick++;
   const rs = rates(s);
@@ -843,27 +887,7 @@ export function step(s) {
         else if (a.status !== "Marching") route(a, enemies[0].x, enemies[0].z);
       }
       if (a.path.length) {
-        const p = a.path[0],
-          d = dist(a, p),
-          speed =
-            c.speed *
-            (!a.enemy && s.technologies.includes("logistics") ? 1.25 : 1) *
-            (a.formation === "defensive"
-              ? 0.7
-              : a.formation === "cavalry" &&
-                  c.class.toLowerCase().includes("cavalry")
-                ? 1.3
-                : 1) *
-            0.7;
         a.status = "Marching";
-        if (d <= speed) {
-          a.x = p.x;
-          a.z = p.z;
-          a.path.shift();
-        } else {
-          a.x += ((p.x - a.x) / d) * speed;
-          a.z += ((p.z - a.z) / d) * speed;
-        }
       } else if (a.status !== "Holding") {
         a.status = "Idle";
         a.target = null;
@@ -876,25 +900,7 @@ export function step(s) {
     )
       a.hp = Math.min(a.maxHp, a.hp + 5);
   }
-  for (const w of s.workers || []) {
-    if (!w.path?.length) continue;
-    const p = w.path[0],
-      d = dist(w, p),
-      speed = 0.28;
-    w.status = "Marching";
-    if (d <= speed) {
-      w.x = p.x;
-      w.z = p.z;
-      w.path.shift();
-    } else {
-      w.x += ((p.x - w.x) / d) * speed;
-      w.z += ((p.z - w.z) / d) * speed;
-    }
-    if (!w.path.length) {
-      w.target = null;
-      w.status = "Idle";
-    }
-  }
+  advanceMovement(s, movementSeconds);
   const campArchers = (s.workers || []).filter(
     (w) => w.role === "archer",
   ).length;

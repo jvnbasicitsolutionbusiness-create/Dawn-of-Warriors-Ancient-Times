@@ -1,4 +1,5 @@
 import {
+  advanceMovement,
   action,
   newGame,
   publicGame,
@@ -9,6 +10,7 @@ import { DEFAULT_SETTINGS } from "../../shared/catalog.js";
 const GAME_KEY = "dawn-of-warriors.game";
 const SETTINGS_KEY = "dawn-of-warriors.settings";
 let lastStepAt = Date.now();
+let lastMovementAt = lastStepAt;
 
 function read(key, fallback) {
   const value = localStorage.getItem(key);
@@ -39,11 +41,18 @@ function currentGame() {
     state = newGame();
     write(GAME_KEY, state);
     lastStepAt = Date.now();
+    lastMovementAt = lastStepAt;
   }
   const now = Date.now();
+  const movementElapsed = Math.min(
+    0.25,
+    Math.max(0, (now - lastMovementAt) / 1000),
+  );
+  lastMovementAt = now;
+  advanceMovement(state, movementElapsed);
   const elapsedSeconds = Math.min(30, Math.floor((now - lastStepAt) / 1000));
-  for (let i = 0; i < elapsedSeconds; i++) step(state);
-  if (elapsedSeconds) {
+  for (let i = 0; i < elapsedSeconds; i++) step(state, 0);
+  if (elapsedSeconds || movementElapsed) {
     lastStepAt += elapsedSeconds * 1000;
     write(GAME_KEY, state);
   }
@@ -58,6 +67,7 @@ export function startGame(civilization, mode) {
   const state = newGame(civilization, mode);
   write(GAME_KEY, state);
   lastStepAt = Date.now();
+  lastMovementAt = lastStepAt;
   return publicGame(state);
 }
 

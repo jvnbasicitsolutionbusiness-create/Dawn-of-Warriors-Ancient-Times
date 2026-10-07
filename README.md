@@ -3,8 +3,9 @@
 > **Static GitHub Pages game:** This release runs without a Node.js or Express
 > server. Enable **Settings → Pages → GitHub Actions** to publish it. See
 > [DEPLOYMENT.md](./DEPLOYMENT.md). Saves are local to the current browser and
-> are not synced between devices; account registration and email recovery are
-> not part of this static release.
+> are not synced between devices. Local commander profiles are browser-only
+> labels, not online accounts; there is no password authentication or email
+> recovery in this static release.
 
 DAWN OF WARRIORS: ANCIENT TIMES is a web-based, open-world real-time strategy game inspired by Age of Empires and Rise of Kingdoms. Set in the ancient world, players can choose kingdoms across Europe, Asia, and the Middle East to build powerful empires, develop settlements, gather resources, recruit armies, and conquer rival civilizations.
 

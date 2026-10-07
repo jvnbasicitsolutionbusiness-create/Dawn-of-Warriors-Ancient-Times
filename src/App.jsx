@@ -30,6 +30,7 @@ import {
   saveSettings,
   startGame,
 } from "./services/localData";
+import { getCurrentLocalProfile } from "./services/localAccounts";
 import {
   music,
   chime,
@@ -180,7 +181,18 @@ export default function App() {
     async function init() {
       try {
         if (active) {
-          await load(localCommander);
+          const profile = getCurrentLocalProfile();
+          await load(
+            profile
+              ? {
+                  id: profile.id,
+                  name: `${profile.firstName} ${profile.lastName}`,
+                  username: profile.username,
+                  empire: profile.empire,
+                  guest: false,
+                }
+              : localCommander,
+          );
         }
       } catch (e) {
         if (active) {
@@ -257,7 +269,7 @@ export default function App() {
       } finally {
         pending = false;
       }
-    }, 1500);
+    }, 100);
     return () => {
       alive = false;
       clearInterval(t);
@@ -1525,7 +1537,7 @@ export default function App() {
             <span>
               {user.guest
                 ? "Saved in this browser · not synced between devices"
-                : `Signed in as ${user.username}`}
+                : `Local banner: ${user.username}`}
             </span>
           </div>
           <div>

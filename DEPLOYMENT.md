@@ -14,12 +14,15 @@ players do not run `npm run dev`.
    will normally be `https://jvnbasicitsolutionbusiness-create.github.io/Dawn-of-Warriors-Ancient-Times/`.
 
 Future pushes to `main` will build and deploy the static site automatically.
-The workflow builds the files in `dist/`; the Node.js version in GitHub Actions
-is only a build tool. Node.js is not used to serve the published game.
+Open the published Pages URL to play: the site automatically shows the loading
+screen, local profile page, and game. GitHub Actions uses Node.js only to build
+the static files in `dist/`; no Node.js or Express server runs on the published
+site, and players do not need to run a command or install anything.
 
-## Local development (optional)
+## Source development (optional)
 
-To preview changes on your own computer, install Node.js 22.13 or newer, then
+These commands are only for contributors changing the source code. They are
+not needed to play the published game. Install Node.js 22.13 or newer, then
 run:
 
 ```sh
@@ -30,10 +33,11 @@ npm run dev
 Open the local URL printed by Vite. This is only for development; the deployed
 GitHub Pages site has its own public URL and works without a local server.
 
-## Saves and limitations
+## Local profiles, saves, and limitations
 
-Game progress and preferences are saved in the browser's local storage. They
-are specific to that browser and website origin; they do not sync between
-devices or browsers. Clearing site data removes local saves. There are no
-accounts, email verification, password recovery, database saves, or server
-multiplayer in this static release.
+Commander profiles, game progress, and preferences are saved in the browser's
+local storage. They are specific to that browser and website origin; they do
+not sync between devices or browsers. Clearing site data removes local
+profiles and saves. Profiles are not secure online accounts: this static game
+has no server, password authentication, email verification, password recovery,
+database saves, or server multiplayer.

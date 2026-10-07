@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  advanceMovement,
   newGame,
   action,
   step,
@@ -273,6 +274,8 @@ test("campaign and story starts are empty forest camps with one era-equipped wor
     assert.equal(s.armies.filter((army) => !army.enemy).length, 0);
     assert.equal(s.armies.filter((army) => army.enemy).length, 0);
     assert.deepEqual(s.sites, []);
+    assert.equal(s.kingdomAwakened, false);
+    assert.equal(s.hero.rank, "Founder");
     assert.ok(s.inventory.includes("pickaxe"));
     assert.ok(s.inventory.includes("bow"));
   }
@@ -285,6 +288,18 @@ test("the founder can move independently before any armies or enemies exist", ()
   assert.equal(founder.status, "Marching");
   step(s);
   assert.notDeepEqual({ x: founder.x, z: founder.z }, start);
+});
+test("founder movement advances smoothly in fractional time steps", () => {
+  const s = newGame("mongol", "campaign");
+  const founder = s.workers[0];
+  const start = { x: founder.x, z: founder.z };
+  action(s, "move", { ids: [founder.id], x: -5, z: 7 });
+
+  advanceMovement(s, 0.1);
+
+  assert.ok(Math.hypot(founder.x - start.x, founder.z - start.z) > 0);
+  assert.ok(Math.hypot(founder.x - start.x, founder.z - start.z) < 0.1);
+  assert.equal(founder.status, "Marching");
 });
 test("founder can establish a first town center with gathered local materials", () => {
   const s = newGame("mongol", "campaign");

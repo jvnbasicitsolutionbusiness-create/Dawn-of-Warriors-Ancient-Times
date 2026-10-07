@@ -229,13 +229,14 @@ export default forwardRef(function Battlefield(
     };
     const pointerUp = (e) => {
       if (down && !moved) {
+        const button = down.button;
         const p = point(e);
         if (p) {
           const l = latest.current;
-          if (l.placing && e.button === 0) {
+          if (l.placing && button === 0) {
             playSfx("build", l.settings.sound);
             l.onBuild(l.placing, p.x, p.z);
-          } else if (e.button === 2) {
+          } else if (button === 2) {
             playSfx("march", l.settings.sound);
             l.onMove(p.x, p.z);
             destination.position.set(p.x, p.y + 0.25, p.z);
@@ -479,7 +480,7 @@ export default forwardRef(function Battlefield(
         const pos = en.model.position,
           dx = a.x - pos.x,
           dz = a.z - pos.z,
-          armySmoothing = 1 - Math.pow(1 - 0.065, frameScale);
+          armySmoothing = 1 - Math.pow(1 - 0.16, frameScale);
         pos.x += dx * armySmoothing;
         pos.z += dz * armySmoothing;
         pos.y =
@@ -529,10 +530,14 @@ export default forwardRef(function Battlefield(
           en.label.querySelector(".label-name").textContent = w.name;
         }
         const pos = en.model.position;
-        const workerSmoothing = 1 - Math.pow(1 - 0.08, frameScale);
+        const workerSmoothing = 1 - Math.pow(1 - 0.18, frameScale);
         pos.x += (w.x - pos.x) * workerSmoothing;
         pos.z += (w.z - pos.z) * workerSmoothing;
-        pos.y = height(pos.x, pos.z);
+        pos.y =
+          height(pos.x, pos.z) +
+          (w.status === "Marching" && !l.settings.reducedMotion
+            ? Math.sin(performance.now() * 0.012) * 0.045
+            : 0);
         en.model.userData.entity = { kind: "worker", id: w.id };
         en.ring.visible =
           l.selected?.kind === "worker" && l.selected.id === w.id;
@@ -613,7 +618,7 @@ export default forwardRef(function Battlefield(
     <div
       className={`battlefield ${placing ? "is-placing" : ""}`}
       ref={host}
-      aria-label="Interactive elevated strategy map. Drag to pan, scroll to zoom, select a friendly unit and right click to move it."
+      aria-label="Interactive elevated strategy map. Left click to select, right click to move selected friendly units, drag to pan, and scroll to zoom."
     />
   );
 });

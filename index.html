@@ -3,15 +3,128 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#071b1a" />
+    <meta name="theme-color" content="#091e1d" />
     <meta
       name="description"
-      content="Build an empire, command armies, and shape the ancient world in Dawn of Warriors."
+      content="DAWN OF WARRIORS: ANCIENT TIMES — Preparing the realm."
     />
     <title>Dawn of Warriors · Ancient Times</title>
+    <style>
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background: #06100f;
+        color: #f6d58d;
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./src/main.jsx"></script>
+  <body data-audio-scene="lobby">
+    <canvas
+      id="pixel-bg"
+      class="pixel-bg"
+      data-scene="roman-age"
+      aria-hidden="true"
+    ></canvas>
+    <div class="bg-shade" aria-hidden="true"></div>
+
+    <main class="boot-shell">
+      <section class="boot-card" aria-label="Loading Dawn of Warriors">
+        <div class="eyebrow">THE ANCIENT WORLD AWAITS</div>
+        <h1>DAWN OF<br />WARRIORS</h1>
+        <div class="tagline">ANCIENT TIMES</div>
+        <div class="subline">Preparing your realm...</div>
+
+        <div class="progress-wrap">
+          <div
+            class="progress"
+            role="progressbar"
+            aria-label="Preparing the game"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <span id="boot-bar"></span>
+            <div class="crate" id="boot-crate" aria-hidden="true"></div>
+          </div>
+          <div class="progress-meta">
+            <div class="status" id="boot-status">Preparing the realm...</div>
+            <div class="pct" id="boot-pct">0%</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (async function () {
+        const bootLocations = ["./boot/", "./public/boot/"];
+        const stylesheet = document.createElement("link");
+        stylesheet.rel = "stylesheet";
+
+        function loadStyle(index) {
+          return new Promise((resolve, reject) => {
+            stylesheet.onload = () => resolve(new URL(".", stylesheet.href));
+            stylesheet.onerror = () => {
+              if (index + 1 < bootLocations.length) {
+                loadStyle(index + 1).then(resolve, reject);
+              } else {
+                reject(
+                  new Error("Could not load the game loading-screen styles."),
+                );
+              }
+            };
+            stylesheet.href = new URL(
+              "boot.css",
+              new URL(bootLocations[index], location.href),
+            ).href;
+            if (!stylesheet.isConnected) document.head.append(stylesheet);
+          });
+        }
+
+        function loadScript(name, base) {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = new URL(name, base).href;
+            script.onload = resolve;
+            script.onerror = () =>
+              reject(
+                new Error(`Could not load the loading-screen file: ${name}`),
+              );
+            document.body.append(script);
+          });
+        }
+
+        try {
+          const bootBase = await loadStyle(0);
+          await loadScript("pixel-bg.js", bootBase);
+          await loadScript("loader.js", bootBase);
+          await loadScript("audio-theme.js", bootBase);
+
+          const assetBase = new URL("../assets/", bootBase);
+          window.BootLoader.start({
+            assets: [
+              "kingdom.jpg",
+              "commander.jpg",
+              "historical/roman-empire.jpeg",
+              "historical/ancient-greece.jpeg",
+            ].map((asset) => new URL(asset, assetBase).href),
+            minMs: 3500,
+            maxMs: 7000,
+            target: "./auth.html",
+            doneStatus: "Opening the kingdom gate...",
+            statuses: [
+              "Preparing your realm...",
+              "Unrolling the campaign maps...",
+              "Summoning your commander...",
+              "Opening the kingdom gate...",
+            ],
+          });
+        } catch (error) {
+          console.error(error);
+          document.getElementById("boot-status").textContent =
+            "Unable to load the game. Refresh the page or check that static files are available.";
+        }
+      })();
+    </script>
   </body>
 </html>
